@@ -38,6 +38,28 @@ Native, host-run (not containerized — need real desktop/GUI access):
 `docker-compose.yml` runs the four Dockerized services together; the two
 native agents are started separately (see their own READMEs).
 
+## Deployment (full local setup)
+
+Two parts, run in order — the Docker stack first, then (optionally) the
+native agents on your Mac:
+
+1. **Docker stack** (always required): `docker compose up -d --build`
+   from the repo root. Brings up `postgres`, `backend`, `simulator`,
+   `frontend`. This alone gives you a fully working demo driven by fake
+   data — no Mac-specific setup needed.
+2. **Native agents** (optional, macOS only, adds real signal): in two
+   separate terminals, `cd desktop-agent && uv sync && uv run python
+   track.py` and `cd notifier-agent && uv sync && uv run python
+   notify.py`. These are NOT in `docker-compose.yml` and never will be —
+   they need direct access to your Mac's real GUI (frontmost window,
+   notification center), which a container on macOS cannot see. Run them
+   any time after the Docker stack is up; stop them any time with
+   `Ctrl+C` independently of the Docker stack.
+
+There's nothing to deploy beyond your own machine for this project — no
+cloud target, no remote server. "Deployment" here means "get all of the
+above running locally." Full details for each part below.
+
 ## Run it
 
 From the repo root:
@@ -69,13 +91,26 @@ with ports `8000` and `5173` published.
 
 Open `http://localhost:5173` — two live-updating panels, polling every 3s:
 - **Events** — the raw incoming event stream (source, type, payload),
-  newest first
+  newest first, capped to the 100 most recent
 - **Nudges** — generated alerts (type, message, dismissed state), newest
-  first
+  first, capped to the 10 most recent
+
+A **"Fake events" toggle** in the header (default: Yes) lets you filter
+the Events panel down to only real events. Every event the simulator/seed
+script posts is tagged `payload.synthetic: true`; real agent events (e.g.
+from `desktop-agent`) never carry that key. Flip the toggle to "No" to see
+only real capture-agent traffic.
 
 No Grafana/Prometheus here on purpose: the data is discrete JSON
 events/nudges, not numeric time-series metrics, so a small custom feed/list
 UI is a better fit than a metrics dashboard.
+
+## Inspecting Postgres directly
+
+Postgres is published on `localhost:5432` (see `docker-compose.yml`). Any
+SQL client (DBeaver, psql, TablePlus) can connect with:
+- Host: `localhost`, Port: `5432`, Database: `deskemon`
+- Username: `deskemon`, Password: `deskemon`
 
 ## Test it end to end
 

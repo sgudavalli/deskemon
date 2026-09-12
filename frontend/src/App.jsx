@@ -43,23 +43,31 @@ function formatTime(ts) {
   }
 }
 
-function EventsFeed({ onCount }) {
+function isFake(event) {
+  return Boolean(event.payload && event.payload.synthetic);
+}
+
+function EventsFeed({ onCount, showFake }) {
   const { data, error } = useLivePolling(getEvents);
-  const newestFirst = [...data].reverse().slice(0, MAX_EVENT_ROWS);
 
   useEffect(() => {
     onCount(data.length);
   }, [data.length, onCount]);
 
+  const filtered = showFake ? data : data.filter((e) => !isFake(e));
+  const newestFirst = [...filtered].reverse().slice(0, MAX_EVENT_ROWS);
+
   return (
     <div className="panel">
       <h2>
         <span className="dot" /> Events
-        <span className="count">{data.length}</span>
+        <span className="count">{filtered.length}</span>
       </h2>
       {error && <div className="error">Error: {error}</div>}
       {!error && newestFirst.length === 0 && (
-        <div className="empty">No events yet...</div>
+        <div className="empty">
+          {showFake ? "No events yet..." : "No real events yet..."}
+        </div>
       )}
       <div className="list">
         {newestFirst.map((e) => (
@@ -67,6 +75,7 @@ function EventsFeed({ onCount }) {
             <div className="row-top">
               <span className={`badge badge-${e.source}`}>{e.source}</span>
               <span>{e.type}</span>
+              {isFake(e) && <span className="badge badge-fake">fake</span>}
               <span>{formatTime(e.timestamp)}</span>
             </div>
             <div className="payload">{JSON.stringify(e.payload)}</div>
@@ -118,11 +127,28 @@ function NudgesList({ onCount }) {
 export default function App() {
   const [eventsCount, setEventsCount] = useState(0);
   const [nudgesCount, setNudgesCount] = useState(0);
+  const [showFake, setShowFake] = useState(true);
 
   return (
     <div className="app">
-      <h1>Deskemon Monitor</h1>
-      <p className="subtitle">Live events and nudges, polling every {POLL_MS / 1000}s</p>
+      <div className="header-row">
+        <div>
+          <h1>Deskemon Monitor</h1>
+          <p className="subtitle">Live events and nudges, polling every {POLL_MS / 1000}s</p>
+        </div>
+        <label className="toggle">
+          <span>Fake events</span>
+          <input
+            type="checkbox"
+            checked={showFake}
+            onChange={(e) => setShowFake(e.target.checked)}
+          />
+          <span className="toggle-track">
+            <span className="toggle-thumb" />
+          </span>
+          <span className="toggle-state">{showFake ? "Yes" : "No"}</span>
+        </label>
+      </div>
 
       <div className="summary">
         <div className="summary-stat">
@@ -136,7 +162,7 @@ export default function App() {
       </div>
 
       <div className="panels">
-        <EventsFeed onCount={setEventsCount} />
+        <EventsFeed onCount={setEventsCount} showFake={showFake} />
         <NudgesList onCount={setNudgesCount} />
       </div>
     </div>

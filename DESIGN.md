@@ -57,19 +57,19 @@ flowchart LR
     subgraph Capture agents
         A1[Mobile sensor app<br/>location + motion]
         A2[Browser extension<br/>tab / idle events]
-        A3[Desktop tracker agent<br/>active window]
+        A3[Desktop capture agent<br/>active window, real ✅]
         A4[Calendar sync worker<br/>OAuth pull, scheduled]
     end
 
     subgraph Backend service
         API[Ingest API<br/>REST endpoint]
-        DB[(Events store<br/>Postgres: events table)]
+        DB[(Events store<br/>Postgres, own container)]
         RULES[Rules engine<br/>scheduled job, every 5 min]
         NUDGES[(Nudges table)]
     end
 
     subgraph Dispatch / targets
-        D1[Desktop tracker agent<br/>fires OS notification]
+        D1[Notifier agent<br/>real ✅, fires OS notification]
         D2[Mobile app<br/>push notification]
         D3[Live dashboard<br/>reads events + nudges directly]
     end
@@ -98,35 +98,43 @@ something on a schedule or in response to events.
 
 | # | Component | Type | Notes |
 |---|---|---|---|
-| C1 | Events table | SQLite table | `(timestamp, source, type, payload)` — all raw input lands here |
-| C2 | Nudges table | SQLite table | `(timestamp, type, message, dismissed)` — generated alerts land here |
+| C1 | Events table | Postgres table, own container | `(timestamp, source, type, payload)` — all raw input lands here |
+| C2 | Nudges table | Postgres table, own container | `(timestamp, type, message, dismissed)` — generated alerts land here |
 | C3 | Ingest API | FastAPI HTTP endpoint | `POST /events` — the only write path into C1, used by every agent |
-| C4 | Dashboard | Static/served web page | Reads C1 + C2 directly (read-only, no writes) |
+| C4 | Dashboard | React + Vite, served by nginx | Reads C1 + C2 via the API (read-only, no writes) |
 
 ### Agents (running processes/binaries)
 
-| # | Agent | Type / where it runs | What it does |
-|---|---|---|---|
-| A1 | Desktop tracker agent | Local binary/script on the work computer, polling loop | Reads foreground app/window title → posts to C3. Also fires OS notifications when it sees a new row in C2 (dual role: capture + dispatch) |
-| A2 | Browser extension | Runs inside the browser | Reads active tab URL/title + idle state → posts to C3 on tab-change/focus/idle |
-| A3 | Calendar sync worker | Backend-side scheduled process | Pulls Google/Outlook Calendar via OAuth on a schedule → posts meeting events to C3 |
-| A4 | Rules engine | Backend-side scheduled process (cron, every 5 min) | Reads recent rows from C1 → computes sedentary score, cognitive-load proxy, reminder triggers → writes rows to C2 |
-| A5 | Sensor Logger app (third-party) | Existing mobile app, not built by us | Streams real GPS/accelerometer data via HTTP webhook → posts to C3 |
+One agent, one responsibility — capture and dispatch are always separate
+processes, never combined.
 
-Only **A1–A4** are ours to build; A5 is an existing app we configure/point at C3.
+| # | Agent | Type / where it runs | What it does | Status |
+|---|---|---|---|---|
+| A1 | Desktop capture agent | Native script on the work computer (`desktop-agent/`), polling loop | Reads foreground app/window title via `osascript` → posts to C3 | ✅ built |
+| A2 | Browser extension | Runs inside the browser | Reads active tab URL/title + idle state → posts to C3 on tab-change/focus/idle | simulated only |
+| A3 | Calendar sync worker | Backend-side scheduled process | Pulls Google/Outlook Calendar via OAuth on a schedule → posts meeting events to C3 | simulated only |
+| A4 | Rules engine | Backend-side scheduled process (cron, every 5 min) | Reads recent rows from C1 → computes sedentary score, cognitive-load proxy, reminder triggers → writes rows to C2 | ✅ built |
+| A5 | Sensor Logger app (third-party) | Existing mobile app, not built by us | Streams real GPS/accelerometer data via HTTP webhook → posts to C3 | simulated only |
+| A6 | Notifier agent | Native script on the work computer (`notifier-agent/`), polling loop | Reads C2 via `GET /nudges` → fires a native OS notification for each new, undismissed nudge | ✅ built |
+| — | Simulator | Dockerized service (`simulator/`) | Fake capture agent standing in for A2/A3/A5 until they're built for real, plus triggers A4 on a fast cadence | ✅ built |
+
+A1–A6 are ours to build; A5's real counterpart is a third-party app we'd
+configure/point at C3 rather than write code for.
 
 ### Build order (priority for a hackathon)
 
-1. C1 + C2 + C3 (backend foundation — nothing else works without these)
-2. A4 Rules engine (demoable immediately using seeded/fake rows in C1)
-3. C4 Dashboard (makes A4's output visible)
-4. A1 Desktop tracker agent (real digital signal + real notification dispatch)
+1. ✅ C1 + C2 + C3 (backend foundation — nothing else works without these)
+2. ✅ A4 Rules engine (demoable immediately using seeded/fake rows in C1)
+3. ✅ C4 Dashboard (makes A4's output visible)
+4. ✅ A1 Desktop capture agent + A6 Notifier agent (real digital signal +
+   real notification dispatch, built as two separate processes)
 5. A2 Browser extension (real digital signal)
 6. A3 Calendar sync worker (enriches A4 with meeting-aware logic)
 7. A5 Sensor Logger app config (real physical signal — last, since it's third-party config, not new code)
 
 ## Decisions
 
-- **Backend stack**: Python + FastAPI, SQLite as the events/nudges store. Single service hosts the ingest API, the DB, and the scheduled rules engine job.
+- **Backend stack**: Python + FastAPI for the ingest API + rules engine, Postgres for the events/nudges store — running in its own container, not embedded, so it can be inspected independently (e.g. via DBeaver).
 - **Mobile capture**: Sensor Logger app (existing third-party app) streams real GPS/accelerometer data via HTTP webhook. Backend maps its payload into our `events` schema (`source="phone"`).
 - **Stress proxy labeling**: shipped as an explicitly labeled "experimental proxy" in the dashboard/nudges (e.g. "Cognitive load (experimental)"), never presented as real physiological stress detection.
+- **Agent granularity**: every agent does exactly one thing. Desktop capture (A1) and notification dispatch (A6) were originally planned as one dual-role agent, but were split into two independent processes — no agent both captures and dispatches.
