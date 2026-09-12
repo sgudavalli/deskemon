@@ -1,0 +1,50 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    ports:
+      - "5432:5432"
+    environment:
+      - POSTGRES_DB=deskemon
+      - POSTGRES_USER=deskemon
+      - POSTGRES_PASSWORD=deskemon
+    volumes:
+      - deskemon-pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U deskemon -d deskemon"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  backend:
+    build: ./backend
+    ports:
+      - "8000:8000"
+    environment:
+      - DATABASE_URL=postgresql://deskemon:deskemon@postgres:5432/deskemon
+      # Fast demo cadences (minutes) so simulate_live.py produces visible
+      # nudges within a couple minutes instead of real-world timescales.
+      - SEDENTARY_WINDOW_MIN=2
+      - COGNITIVE_LOAD_WINDOW_MIN=1
+      - COGNITIVE_LOAD_TAB_SWITCH_THRESHOLD=8
+      - REMINDER_HYDRATION_INTERVAL_MIN=2
+      - REMINDER_FOOD_INTERVAL_MIN=3
+      - REMINDER_MEDICINE_INTERVAL_MIN=4
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  simulator:
+    build: ./simulator
+    environment:
+      - BASE_URL=http://backend:8000
+    depends_on:
+      backend:
+        condition: service_healthy
+
+volumes:
+  deskemon-pgdata:
