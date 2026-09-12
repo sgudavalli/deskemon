@@ -14,6 +14,10 @@ to enter companion mode. Open `/?companion=1` to skip the welcome screen or
 `/#scenarios` for the complete scenario library, `/#face-lab` for expressions,
 and `/#style` for the UI system.
 
+Open `/?shoot=1` for the two-touch Wizard-of-Oz filming sequence: splash,
+hydration reminder, sleep, wake, captured 5 PM commitment, and 6 PM conflict
+resolution.
+
 The welcome screen and companion mode adapt to portrait and landscape phone,
 tablet, and desktop viewports. The dashboard is maintained as a separate web
 app in `../frontend-dashboard-app` and uses the same responsive breakpoints and

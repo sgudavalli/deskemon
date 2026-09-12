@@ -34,8 +34,27 @@ const PRESENCE_LABEL: Record<SlackPresence, string> = {
   away: 'Slack · Away',
 };
 
+const SHOOT_TRANSCRIPT: TranscriptLine[] = [
+  {
+    id: 'shoot-colleague',
+    speaker: 'Colleague',
+    text: 'Can you deliver the final prototypes by 5 PM?',
+    isOwner: false,
+  },
+  {
+    id: 'shoot-owner',
+    speaker: 'Champ',
+    text: 'Yes, I can do that.',
+    isOwner: true,
+  },
+];
+
 export function Deskemon() {
   const adapters = useMemo(() => createSeededAdapters(), []);
+  const shootMode = useMemo(
+    () => new URLSearchParams(window.location.search).get('shoot') === '1',
+    [],
+  );
 
   const [state, setState] = useState<UIState>('attentive');
   const [energy, setEnergy] = useState(0);
@@ -46,6 +65,9 @@ export function Deskemon() {
   const [saved, setSaved] = useState<Commitment | null>(null);
   const [thinkingIdx, setThinkingIdx] = useState(0);
   const [reducedMotion, setReducedMotion] = useState(false);
+  const [showHydration, setShowHydration] = useState(false);
+  const [shootReadyToWake, setShootReadyToWake] = useState(false);
+  const [shootConflict, setShootConflict] = useState(false);
 
   const timers = useRef<number[]>([]);
   const after = useCallback((ms: number, fn: () => void) => {
@@ -67,6 +89,19 @@ export function Deskemon() {
   }, []);
 
   useEffect(() => adapters.slack.subscribe(setSlack), [adapters]);
+
+  // Video-shoot timeline: one splash touch, then one wake touch.
+  useEffect(() => {
+    if (!shootMode) return;
+    after(3000, () => setShowHydration(true));
+    after(8000, () => setShowHydration(false));
+    after(12000, () => {
+      setState('sleeping');
+      setShootReadyToWake(true);
+    });
+
+    return clearTimers;
+  }, [after, clearTimers, shootMode]);
 
   // Thinking copy cycles through truthful stages.
   useEffect(() => {
@@ -196,8 +231,41 @@ export function Deskemon() {
     setState((s) => (s === 'sleeping' ? 'attentive' : 'sleeping'));
   }, [clearTimers]);
 
-  const label =
-    state === 'thinking' ? THINKING_COPY[thinkingIdx] : visual.label;
+  const wakeShootStory = useCallback(() => {
+    if (!shootMode || !shootReadyToWake) return;
+    clearTimers();
+    setShootReadyToWake(false);
+    setShootConflict(false);
+    setCaption(null);
+    setLines([]);
+    setState('speechDetected');
+
+    let t = 0;
+    const pulse = window.setInterval(() => {
+      t += 0.1;
+      setEnergy(0.28 + 0.34 * Math.abs(Math.sin(t * 2.2)));
+    }, 100);
+    timers.current.push(pulse as unknown as number);
+
+    after(650, () => setState('listening'));
+    after(1400, () => setLines([SHOOT_TRANSCRIPT[0]]));
+    after(3900, () => setLines(SHOOT_TRANSCRIPT));
+    after(5200, () => {
+      clearInterval(pulse);
+      setEnergy(0);
+      setState('thinking');
+    });
+    after(6800, () => {
+      setLines([]);
+      setShootConflict(true);
+      setState('conflict');
+      setCaption('That overlaps with the Hackathon demo. Want me to move the prototypes to 6 PM?');
+    });
+  }, [after, clearTimers, shootMode, shootReadyToWake]);
+
+  const label = shootMode && state === 'sleeping'
+    ? 'Tap to wake me'
+    : state === 'thinking' ? THINKING_COPY[thinkingIdx] : visual.label;
 
   const showingTranscript =
     (state === 'listening' || state === 'thinking') && lines.length > 0;
@@ -240,6 +308,17 @@ export function Deskemon() {
           />
         </div>
       </div>
+
+      {shootMode && shootReadyToWake && (
+        <button
+          type="button"
+          className="shoot-wake-button"
+          onClick={wakeShootStory}
+          aria-label="Wake Deskemon and listen for the commitment"
+        >
+          <span aria-hidden="true" />
+        </button>
+      )}
 
       {/* ---- Top status ---- */}
       <div
@@ -347,6 +426,23 @@ export function Deskemon() {
 
       {toast && <Toast>{toast}</Toast>}
 
+      {showHydration && (
+        <aside className="shoot-hydration" role="status" aria-live="polite">
+          <div className="shoot-hydration-icon" aria-hidden="true">
+            <svg width="26" height="26" viewBox="0 0 24 24" fill="none">
+              <path d="M12 3.2c-2.8 3.4-5.2 6.4-5.2 9.8A5.2 5.2 0 0 0 12 18.2a5.2 5.2 0 0 0 5.2-5.2c0-3.4-2.4-6.4-5.2-9.8Z" stroke="currentColor" strokeWidth="1.8" />
+              <path d="M9.2 13.5c.35 1.25 1.3 2 2.8 2.25" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+            </svg>
+          </div>
+          <div>
+            <span>WELLBEING · NOW</span>
+            <strong>Time for some water</strong>
+            <p>You’ve been focused for a while. Take a sip—I’ll keep your place.</p>
+          </div>
+          <div className="shoot-hydration-timer" aria-hidden="true"><span /></div>
+        </aside>
+      )}
+
       {/* ---- Memory candidate ---- */}
       {state === 'memoryCandidate' && (
         <Sheet>
@@ -368,7 +464,7 @@ export function Deskemon() {
       )}
 
       {/* ---- THE HERO MOMENT ---- */}
-      {(state === 'conflict' || state === 'speaking') && (
+      {(state === 'conflict' || state === 'speaking') && !shootConflict && (
         <Sheet accent="coral">
           <SheetTitle>That clashes with your day</SheetTitle>
           <FactRow
@@ -396,6 +492,19 @@ export function Deskemon() {
             <Button kind="ghost" onClick={forget}>
               Forget this
             </Button>
+          </Actions>
+        </Sheet>
+      )}
+
+      {shootConflict && (
+        <Sheet accent="coral">
+          <SheetTitle>That clashes with right now</SheetTitle>
+          <FactRow label="You committed to" value="Final prototypes · 5:00 PM" />
+          <FactRow label="But you're in" value="Hackathon demo · Now–6:00 PM" tone="coral" />
+          <FactRow label="Suggested" value="Move final prototypes to 6:00 PM" tone="teal" />
+          <Actions>
+            <Button kind="primary">Move to 6:00 PM</Button>
+            <Button kind="secondary">Keep 5:00 PM</Button>
           </Actions>
         </Sheet>
       )}
