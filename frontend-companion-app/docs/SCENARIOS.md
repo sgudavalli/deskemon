@@ -5,8 +5,8 @@ no network, no model. Timings below are the animation specification.
 
 Play them: run the app and open `#scenarios`.
 
-> This file is generated from `app/src/scenarios/registry.ts`.
-> Edit the registry, then run `node scripts-gen-scenarios.mjs` from `app/`.
+> This file is generated from `src/scenarios/registry.ts`.
+> Edit the registry, then run `node scripts-gen-scenarios.mjs` from `frontend-companion-app/`.
 
 ---
 
@@ -240,4 +240,3 @@ Continuity of identity: the same companion that lives on the computer, now on th
 | 5 | 2400 | `celebrating` | label: "Codex finished", toast | Wedge eyes plus radiating ticks. Brief — one bounce and back. The same celebration the pet does on the computer, which is the point: same companion, new senses. |
 
 ---
-

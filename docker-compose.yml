@@ -48,7 +48,7 @@ services:
 
   frontend:
     # The animated companion is the user-facing product and visual source of truth.
-    build: ./app
+    build: ./frontend-companion-app
     ports:
       - "5173:80"
     depends_on:

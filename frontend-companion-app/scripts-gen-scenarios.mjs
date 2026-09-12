@@ -29,8 +29,8 @@ no network, no model. Timings below are the animation specification.
 
 Play them: run the app and open \`#scenarios\`.
 
-> This file is generated from \`app/src/scenarios/registry.ts\`.
-> Edit the registry, then run \`node scripts-gen-scenarios.mjs\` from \`app/\`.
+> This file is generated from \`src/scenarios/registry.ts\`.
+> Edit the registry, then run \`node scripts-gen-scenarios.mjs\` from \`frontend-companion-app/\`.
 
 ---
 

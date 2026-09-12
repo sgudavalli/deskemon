@@ -10,7 +10,7 @@ to say or needs the user's approval.
 
 ## Repository map
 
-- `app/` — **the primary Deskemon experience and visual source of truth**.
+- `frontend-companion-app/` — **the primary Deskemon experience and visual source of truth**.
   React, TypeScript, the animated face, interaction states, privacy controls,
   ten scenarios, and presenter controls.
 - `backend/` — FastAPI event ingestion, nudge storage, and rules engine.
@@ -19,12 +19,13 @@ to say or needs the user's approval.
 - `simulator/` — simulated phone, browser, and calendar inputs for a reliable demo.
 - `frontend-monitor-app/` — Shiva's engineering dashboard for inspecting raw
   events and nudges. This is an internal debugging surface, not the product UI.
-- `assets/` — character references and Codex pet motion assets.
-- `docs/` — scenario, interaction, integration, and UI documentation.
+- `frontend-companion-app/assets/` — character references and Codex pet motion assets.
+- `frontend-companion-app/docs/` — scenario, interaction, integration, and UI documentation.
 
-The visual and interaction decisions in `app/`, `CLAUDE.md`, and
-`docs/UI-GUIDE.md` are authoritative for the user-facing experience. Backend and
-agent work connects through adapters without replacing that interface.
+The visual and interaction decisions in `frontend-companion-app/`, its
+`CLAUDE.md`, and `docs/UI-GUIDE.md` are authoritative for the user-facing
+experience. Backend and agent work connects through adapters without replacing
+that interface.
 
 ## Run the full local stack
 
@@ -57,7 +58,7 @@ Stop the stack while retaining database data with `docker compose down`. Add
 ## Run only the companion
 
 ```bash
-cd app
+cd frontend-companion-app
 npm install
 npm run dev -- --host
 ```
@@ -128,6 +129,6 @@ with the local development password `deskemon`.
 
 ## Start here
 
-Read `HANDOFF.md` for the current build state, demo path, architecture, and
-known integration boundaries. `PROJECT_CONTEXT.md` is the product source of
-truth and `DESIGN.md` describes the wider event architecture.
+Read `frontend-companion-app/HANDOFF.md` for the current build state, demo path,
+architecture, and known integration boundaries. Its `PROJECT_CONTEXT.md` is the
+product source of truth and `DESIGN.md` describes the wider event architecture.

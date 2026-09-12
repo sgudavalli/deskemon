@@ -14,4 +14,4 @@ and `/#style` for the UI system.
 
 The app currently uses seeded adapters so the central demonstration remains
 deterministic. The repository's backend and agents are real but are not yet
-wired into these adapters. See `../HANDOFF.md` and `../docs/INTEGRATIONS.md`.
+wired into these adapters. See `HANDOFF.md` and `docs/INTEGRATIONS.md`.
