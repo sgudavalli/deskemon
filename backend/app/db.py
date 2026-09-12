@@ -29,10 +29,20 @@ CREATE TABLE IF NOT EXISTS routine_configs (
     data TEXT NOT NULL
 );
 
+CREATE TABLE IF NOT EXISTS event_summaries (
+    id SERIAL PRIMARY KEY,
+    timestamp TEXT NOT NULL,
+    window_start TEXT NOT NULL,
+    window_end TEXT NOT NULL,
+    summary TEXT NOT NULL,
+    sources TEXT NOT NULL
+);
+
 CREATE INDEX IF NOT EXISTS idx_events_timestamp ON events (timestamp);
 CREATE INDEX IF NOT EXISTS idx_events_source ON events (source);
 CREATE INDEX IF NOT EXISTS idx_nudges_timestamp ON nudges (timestamp);
 CREATE INDEX IF NOT EXISTS idx_nudges_type ON nudges (type);
+CREATE INDEX IF NOT EXISTS idx_event_summaries_window_end ON event_summaries (window_end);
 """
 
 # Demo-fast intervals on the routines enabled by default, consistent with

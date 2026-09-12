@@ -21,6 +21,9 @@ to say or needs the user's approval.
   events and nudges. This is an internal debugging surface, not the product UI.
 - `frontend-dashboard-app/` — Deskemon Control Center: configure routine/reminder
   nudges (interval, enabled, context-aware) against the backend's `/routines` API.
+- `digest-agent/` — LLM-powered agent (Claude Agent SDK): summarizes events
+  every 5 minutes and synthesizes an hourly "hourly-ingest" nudge. The one
+  agent in this project that calls an LLM — see its `README.md`.
 - `frontend-companion-app/assets/` — character references and Codex pet motion assets.
 - `frontend-companion-app/docs/` — scenario, interaction, integration, and UI documentation.
 
@@ -38,7 +41,7 @@ Native, host-run (not containerized — need real desktop/GUI access):
   separate process from `desktop-agent` on purpose — each agent does one
   thing.
 
-`docker-compose.yml` runs the four Dockerized services together; the two
+`docker-compose.yml` runs the seven Dockerized services together; the two
 native agents are started separately (see their own READMEs).
 
 ## Deployment (full local setup)
@@ -48,8 +51,12 @@ See **`DEPLOY.md`** for full step-by-step deployment instructions
 
 1. **Docker stack** (always required): `docker compose up -d --build`
    from the repo root. Brings up `postgres`, `backend`, `simulator`,
-   `frontend-companion-app`, `frontend-monitor-app`. This alone gives you
-   a fully working demo driven by fake data — no Mac-specific setup needed.
+   `frontend-companion-app`, `frontend-monitor-app`, `frontend-dashboard-app`,
+   `digest-agent`. This alone gives you a fully working demo driven by fake
+   data — no Mac-specific setup needed. `digest-agent` needs
+   `ANTHROPIC_API_KEY` set in a root `.env` (copy `.env.example`) to
+   actually produce digests; without it, it idles/logs an error instead of
+   crashing.
 2. **Native agents** (optional, macOS only, adds real signal): in two
    separate terminals, `cd desktop-agent && uv sync && uv run python
    track.py` and `cd notifier-agent && uv sync && uv run python
@@ -71,7 +78,7 @@ From the repo root:
 docker compose up -d --build
 ```
 
-This starts six containers:
+This starts seven containers:
 - `postgres` — the database (backend waits for it to report healthy)
 - `backend` — the API + rules engine, exposed on `http://localhost:8000`
 - `simulator` — starts once backend is healthy; continuously streams fake
@@ -83,6 +90,10 @@ This starts six containers:
   on `http://localhost:5174`
 - `frontend-dashboard-app` — the Control Center for configuring routine
   reminders, exposed on `http://localhost:5175`
+- `digest-agent` — reads events every 5 min, calls Claude for a summary
+  (written to Postgres), then once an hour synthesizes those summaries into
+  an "hourly-ingest" nudge (see `digest-agent/README.md`); requires
+  `ANTHROPIC_API_KEY`
 
 The companion remains deliberately demo-safe: its core judge scenario is seeded
 and can run even if a live integration is unavailable. The backend, simulator,
@@ -98,9 +109,21 @@ docker compose logs -f simulator   # watch it stream events + nudges live
 
 You should see `deskemon-postgres-1` (healthy), `deskemon-backend-1`
 (healthy), `deskemon-simulator-1` (up), `deskemon-frontend-companion-app-1`
-(up), `deskemon-frontend-monitor-app-1` (up), and
-`deskemon-frontend-dashboard-app-1` (up), with ports `8000`, `5173`, `5174`,
-and `5175` published.
+(up), `deskemon-frontend-monitor-app-1` (up),
+`deskemon-frontend-dashboard-app-1` (up), and `deskemon-digest-agent-1` (up),
+with ports `8000`, `5173`, `5174`, and `5175` published (`digest-agent`
+publishes no port — it only talks to `backend` internally).
+
+## Hourly ingest (digest agent)
+
+`digest-agent` bridges the physical/digital capture back to the user as a
+narrative instead of point-in-time nudges: every 5 minutes it summarizes
+recent events with Claude (web-search-enabled for added context), and once
+an hour it synthesizes those summaries into one "hourly-ingest" nudge —
+delivered through the same nudge pipeline as everything else (shows up in
+both dashboards and `notifier-agent`'s native notification, no special
+handling needed). Requires `ANTHROPIC_API_KEY` in a root `.env` (copy
+`.env.example`); see `digest-agent/README.md` for details.
 
 ## Routines (Control Center)
 
@@ -264,7 +287,10 @@ won't spam notifications for nudges that already existed before it ran).
 | `POST /events` | Ingest an event |
 | `GET /events?since=&source=` | List events |
 | `GET /nudges?since=` | List generated nudges |
+| `POST /nudges` | Create a nudge directly (used by `digest-agent`) |
 | `POST /rules/run` | Run the rules engine |
+| `GET /routines` / `POST /routines` / `PUT /routines/{id}` | Configure reminder routines |
+| `GET /summaries?since=` / `POST /summaries` | 5-minute event summaries written by `digest-agent` |
 
 ## Start here
 

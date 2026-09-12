@@ -1,12 +1,31 @@
+from datetime import datetime, timezone
 from typing import Optional
 
 from fastapi import APIRouter, Query
 
 from .db import get_conn
-from .models import NudgeOut
+from .models import NudgeIn, NudgeOut
 from .rules_engine import run_once
 
 router = APIRouter()
+
+
+@router.post("/nudges", response_model=NudgeOut)
+def create_nudge(nudge: NudgeIn):
+    timestamp = datetime.now(timezone.utc).isoformat()
+    with get_conn() as conn:
+        cur = conn.execute(
+            "INSERT INTO nudges (timestamp, type, message, dismissed) VALUES (%s, %s, %s, 0) RETURNING id",
+            (timestamp, nudge.type, nudge.message),
+        )
+        nudge_id = cur.fetchone()["id"]
+    return NudgeOut(
+        id=nudge_id,
+        timestamp=timestamp,
+        type=nudge.type,
+        message=nudge.message,
+        dismissed=False,
+    )
 
 
 @router.get("/nudges", response_model=list[NudgeOut])

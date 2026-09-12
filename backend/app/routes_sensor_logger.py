@@ -59,4 +59,15 @@ def sensor_logger_webhook(body: dict[str, Any]):
             {"moving": moving},
         )
 
+    mic_readings = [r for r in readings if r.get("name") == "microphone"]
+    if mic_readings:
+        avg_dbfs = sum(r["values"]["dBFS"] for r in mic_readings) / len(mic_readings)
+        latest_time = max(r["time"] for r in mic_readings)
+        _insert_event(
+            _ns_to_iso(latest_time),
+            "phone",
+            "audio_level",
+            {"dbfs": avg_dbfs},
+        )
+
     return {"status": "ok"}

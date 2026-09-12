@@ -71,5 +71,20 @@ services:
       backend:
         condition: service_healthy
 
+  digest-agent:
+    # The one LLM-calling agent in this project: synthesizes events into a
+    # 5-min summary table, then an hourly "hourly-ingest" nudge. See
+    # digest-agent/README.md. Requires ANTHROPIC_API_KEY in the repo root .env.
+    build: ./digest-agent
+    env_file: .env
+    environment:
+      - BACKEND_URL=http://backend:8000
+      # Demo-fast cadence so a digest appears without waiting a full hour.
+      - SUMMARY_INTERVAL_SEC=60
+      - DIGEST_INTERVAL_SEC=300
+    depends_on:
+      backend:
+        condition: service_healthy
+
 volumes:
   deskemon-pgdata:

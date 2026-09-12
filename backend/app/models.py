@@ -22,12 +22,33 @@ class EventOut(BaseModel):
     payload: dict[str, Any]
 
 
+class NudgeIn(BaseModel):
+    type: str
+    message: str
+
+
 class NudgeOut(BaseModel):
     id: int
     timestamp: str
     type: str
     message: str
     dismissed: bool
+
+
+class SummaryIn(BaseModel):
+    window_start: str
+    window_end: str
+    summary: str
+    sources: list[str] = Field(default_factory=list)
+
+
+class SummaryOut(BaseModel):
+    id: int
+    timestamp: str
+    window_start: str
+    window_end: str
+    summary: str
+    sources: list[str]
 
 
 class RoutineIn(BaseModel):

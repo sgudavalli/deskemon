@@ -11,16 +11,20 @@ for architecture. This doc is just the step-by-step run instructions.
 - `uv` (only needed if you also want to run the native macOS agents)
 - macOS (only needed for the native agents — `desktop-agent` and
   `notifier-agent`; the Docker stack itself runs on any platform)
+- An Anthropic API key (only needed for `digest-agent` to actually produce
+  digests — copy `.env.example` to `.env` and fill in `ANTHROPIC_API_KEY`;
+  without it, `digest-agent` idles/logs an error instead of crashing)
 
 ## Step 1 — Docker stack (always required)
 
 From the repo root:
 
 ```bash
+cp .env.example .env   # then fill in ANTHROPIC_API_KEY
 docker compose up -d --build
 ```
 
-This brings up six containers:
+This brings up seven containers:
 
 | Service | Purpose | Host port |
 |---|---|---|
@@ -30,10 +34,11 @@ This brings up six containers:
 | `frontend-companion-app` | the animated companion, judge-facing product | `5173` |
 | `frontend-monitor-app` | engineering dashboard for raw events/nudges | `5174` |
 | `frontend-dashboard-app` | Control Center — configure routine/reminder nudges | `5175` |
+| `digest-agent` | LLM-powered event summarizer → hourly-ingest nudge | — (internal only) |
 
-`backend` waits for `postgres` to report healthy; `simulator` and all three
-frontends wait for `backend` to report healthy. No two services share a
-host port — safe to bring the whole stack up in one shot.
+`backend` waits for `postgres` to report healthy; `simulator`, all three
+frontends, and `digest-agent` wait for `backend` to report healthy. No two
+services share a host port — safe to bring the whole stack up in one shot.
 
 Verify it's up:
 
@@ -44,7 +49,7 @@ curl http://localhost:8000/health
 docker compose logs -f simulator   # watch it stream events + nudges live
 ```
 
-You should see all six containers listed, with `postgres` and `backend`
+You should see all seven containers listed, with `postgres` and `backend`
 reporting `healthy`.
 
 Open:
@@ -103,6 +108,27 @@ phone traffic.
 Motion sensitivity is tunable via `SENSOR_LOGGER_MOTION_THRESHOLD_MS2` in
 `docker-compose.yml` (default `1.5` m/s² deviation from gravity).
 
+## Step 4 — Hourly ingest (digest agent, requires ANTHROPIC_API_KEY)
+
+`digest-agent` reads events every 5 minutes, calls Claude (Claude Agent SDK,
+web-search enabled) for a short synthesis, and writes it to Postgres. Once an
+hour it reads back that hour's summaries and calls Claude again to produce
+one "hourly-ingest" nudge, delivered through the existing nudge pipeline —
+no separate frontend needed, it shows up in both dashboards and fires a real
+notification via `notifier-agent` like any other nudge.
+
+Requires `ANTHROPIC_API_KEY` in the root `.env` (Step 1). Verify:
+
+```bash
+docker compose logs -f digest-agent
+curl http://localhost:8000/summaries | python3 -m json.tool
+curl http://localhost:8000/nudges | python3 -m json.tool   # look for type: "digest"
+```
+
+Demo cadence is fast (`SUMMARY_INTERVAL_SEC=60`, `DIGEST_INTERVAL_SEC=300` in
+`docker-compose.yml`) rather than the real 5-min/1-hour cadence, so digests
+appear quickly without waiting.
+
 ## Stopping / resetting
 
 ```bash
@@ -126,12 +152,17 @@ Or just run `./reset.sh` from the repo root, which does exactly that.
 - **Port already in use / container fails to bind a port**: check nothing
   else on your machine is already listening on `5432`, `8000`, `5173`,
   `5174`, or `5175` (`lsof -i :<port>`). `docker-compose.yml` should define
-  exactly six services (`postgres`, `backend`, `simulator`,
+  exactly seven services (`postgres`, `backend`, `simulator`,
   `frontend-companion-app`, `frontend-monitor-app`,
-  `frontend-dashboard-app`), each with a distinct host port — if you see
-  duplicate or conflicting `ports:` entries after a merge, that's a sign
-  of leftover merge-conflict duplication and should be cleaned up back to
-  this 6-service shape.
+  `frontend-dashboard-app`, `digest-agent`), each with a distinct host port
+  (`digest-agent` publishes none) — if you see duplicate or conflicting
+  `ports:` entries after a merge, that's a sign of leftover
+  merge-conflict duplication and should be cleaned up back to this
+  7-service shape.
+- **`digest-agent` logs `Invalid API key` or idles without producing
+  summaries/digests**: `ANTHROPIC_API_KEY` in the root `.env` is missing or
+  a placeholder — copy `.env.example` and fill in a real key, then
+  `docker compose up -d --build digest-agent`.
 - **`docker compose up` fails to parse the compose file**: look for
   literal `<<<<<<<` / `=======` / `>>>>>>>` markers — an unresolved git
   merge conflict.

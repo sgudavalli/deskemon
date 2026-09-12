@@ -7,10 +7,11 @@ Step 1 is already running on your Mac.
 
 ## What this does
 
-Your phone streams real GPS location and motion data straight into
-Deskemon, replacing the simulator's fake `phone` events. No app install
-or code on your side beyond the steps below — Deskemon uses the existing
-third-party **Sensor Logger** app rather than a custom mobile app.
+Your phone streams real GPS location, motion, and ambient sound-level data
+straight into Deskemon, replacing the simulator's fake `phone` events. No
+app install or code on your side beyond the steps below — Deskemon uses
+the existing third-party **Sensor Logger** app rather than a custom mobile
+app.
 
 ## Prerequisites
 
@@ -42,10 +43,12 @@ third-party **Sensor Logger** app rather than a custom mobile app.
    enough to see live movement in the dashboard without flooding the
    backend.
 
-5. **Enable these two sensors** (leave everything else off — Deskemon
+5. **Enable these three sensors** (leave everything else off — Deskemon
    only reads these):
    - **Location**
    - **Accelerometer**
+   - **Microphone** (only a loudness/dBFS reading is sent — no audio
+     content or recordings ever leave your phone)
 
 6. **Start recording** in the app.
 

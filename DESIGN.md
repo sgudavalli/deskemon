@@ -55,7 +55,7 @@ sensors / extension / agent / calendar
 ```mermaid
 flowchart LR
     subgraph Capture agents
-        A1[Mobile sensor app<br/>location + motion, real ✅]
+        A1[Mobile sensor app<br/>location + motion + audio level, real ✅]
         A2[Browser extension<br/>tab / idle events]
         A3[Desktop capture agent<br/>active window, real ✅]
         A4[Calendar sync worker<br/>OAuth pull, scheduled]
@@ -66,6 +66,11 @@ flowchart LR
         DB[(Events store<br/>Postgres, own container)]
         RULES[Rules engine<br/>scheduled job, every 5 min]
         NUDGES[(Nudges table)]
+        SUMMARIES[(Event summaries table)]
+    end
+
+    subgraph "Digest agent (own container)"
+        DIGEST[Digest agent<br/>Claude Agent SDK + WebSearch, real ✅<br/>the one LLM caller]
     end
 
     subgraph Dispatch / targets
@@ -81,6 +86,12 @@ flowchart LR
     API --> DB
     DB --> RULES
     RULES --> NUDGES
+    DIGEST -->|GET /events, every 5 min| API
+    DIGEST -->|POST /summaries| API
+    API --> SUMMARIES
+    DIGEST -->|GET /summaries, hourly| API
+    DIGEST -->|POST /nudges type=digest| API
+    API --> NUDGES
     NUDGES --> D1
     NUDGES --> D2
     NUDGES --> D3
@@ -102,6 +113,8 @@ something on a schedule or in response to events.
 | C2 | Nudges table | Postgres table, own container | `(timestamp, type, message, dismissed)` — generated alerts land here |
 | C3 | Ingest API | FastAPI HTTP endpoint | `POST /events` — the only write path into C1, used by every agent |
 | C4 | Dashboard | React + Vite, served by nginx | Reads C1 + C2 via the API (read-only, no writes) |
+| C5 | Routine configs table | Postgres table, own container | One row per configurable reminder (interval, enabled, context-aware); read/written via `/routines` |
+| C6 | Event summaries table | Postgres table, own container | `(window_start, window_end, summary, sources)` — written by A7's 5-min loop, read back by its hourly loop |
 
 ### Agents (running processes/binaries)
 
@@ -113,13 +126,16 @@ processes, never combined.
 | A1 | Desktop capture agent | Native script on the work computer (`desktop-agent/`), polling loop | Reads foreground app/window title via `osascript` → posts to C3 | ✅ built |
 | A2 | Browser extension | Runs inside the browser | Reads active tab URL/title + idle state → posts to C3 on tab-change/focus/idle | simulated only |
 | A3 | Calendar sync worker | Backend-side scheduled process | Pulls Google/Outlook Calendar via OAuth on a schedule → posts meeting events to C3 | simulated only |
-| A4 | Rules engine | Backend-side scheduled process (cron, every 5 min) | Reads recent rows from C1 → computes sedentary score, cognitive-load proxy, reminder triggers → writes rows to C2 | ✅ built |
-| A5 | Sensor Logger app (third-party) | Existing mobile app, not built by us | Streams real GPS/accelerometer data via HTTP webhook → posts to C3 | ✅ built (`POST /webhooks/sensor-logger`) |
+| A4 | Rules engine | Backend-side scheduled process (every 5 min) | Reads enabled rows from C5 (`routine_configs`) → fires interval-based reminder nudges (sedentary, hydration, meals, medicine, focus recovery) to C2, meeting-aware via calendar events | ✅ built |
+| A5 | Sensor Logger app (third-party) | Existing mobile app, not built by us | Streams real GPS/accelerometer/microphone-level data via HTTP webhook → posts to C3 (camera/vision is not available over this app's HTTP push, numeric sensors only) | ✅ built (`POST /webhooks/sensor-logger`) |
 | A6 | Notifier agent | Native script on the work computer (`notifier-agent/`), polling loop | Reads C2 via `GET /nudges` → fires a native OS notification for each new, undismissed nudge | ✅ built |
+| A7 | Digest agent | Dockerized service (`digest-agent/`), own container, two internal timers | Every 5 min: reads recent C1 rows, calls Claude (Claude Agent SDK, `WebSearch` enabled) for a short synthesis → writes to C6. Every hour: reads C6 since the last digest, calls Claude again to write one "hourly-ingest" narrative → posts as a `type="digest"` row to C2 | ✅ built |
 | — | Simulator | Dockerized service (`simulator/`) | Fake capture agent standing in for A2/A3/A5 until they're built for real, plus triggers A4 on a fast cadence | ✅ built |
 
-A1–A6 are ours to build; A5's real counterpart is a third-party app we'd
-configure/point at C3 rather than write code for.
+A1–A7 are ours to build; A5's real counterpart is a third-party app we'd
+configure/point at C3 rather than write code for. A7 is the one agent in
+this project that calls an LLM — see `frontend-companion-app/CLAUDE.md`'s
+"no LLM calls" convention for why everything else stays deterministic.
 
 ### Build order (priority for a hackathon)
 
@@ -131,10 +147,12 @@ configure/point at C3 rather than write code for.
 5. A2 Browser extension (real digital signal)
 6. A3 Calendar sync worker (enriches A4 with meeting-aware logic)
 7. ✅ A5 Sensor Logger app config (real physical signal — last, since it's third-party config, not new code)
+8. ✅ A7 Digest agent (LLM-synthesized hourly ingest, bridges physical + digital signal into a narrative)
 
 ## Decisions
 
 - **Backend stack**: Python + FastAPI for the ingest API + rules engine, Postgres for the events/nudges store — running in its own container, not embedded, so it can be inspected independently (e.g. via DBeaver).
-- **Mobile capture**: Sensor Logger app (existing third-party app) streams real GPS/accelerometer data via HTTP webhook. Backend maps its payload into our `events` schema (`source="phone"`).
+- **Mobile capture**: Sensor Logger app (existing third-party app) streams real GPS/accelerometer/microphone-loudness data via HTTP webhook. Backend maps its payload into our `events` schema (`source="phone"`, types `location`/`motion`/`audio_level`). Camera/vision was evaluated but Sensor Logger's HTTP Push does not transmit image/video data at all — only numeric/metadata sensor readings — so vision capture isn't possible through this app.
 - **Stress proxy labeling**: shipped as an explicitly labeled "experimental proxy" in the dashboard/nudges (e.g. "Cognitive load (experimental)"), never presented as real physiological stress detection.
 - **Agent granularity**: every agent does exactly one thing. Desktop capture (A1) and notification dispatch (A6) were originally planned as one dual-role agent, but were split into two independent processes — no agent both captures and dispatches.
+- **The one sanctioned LLM call**: A7 (digest agent) is a deliberate, isolated exception to "no LLM calls anywhere" — synthesizing a narrative from raw events is inherently a writing task, not a threshold check. It's its own container, talks to the backend only over HTTP, and never touches Postgres directly, so the exception stays contained to one agent instead of leaking into the rules engine.

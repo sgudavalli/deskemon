@@ -3,6 +3,9 @@ __pycache__/
 *.py[cod]
 .venv/
 
+# Secrets
+.env
+
 # Local DB artifacts (pre-Postgres leftovers, if any)
 *.db
 

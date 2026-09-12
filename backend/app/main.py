@@ -6,6 +6,7 @@ from .routes_events import router as events_router
 from .routes_nudges import router as nudges_router
 from .routes_routines import router as routines_router
 from .routes_sensor_logger import router as sensor_logger_router
+from .routes_summaries import router as summaries_router
 from .rules_engine import start_scheduler
 
 app = FastAPI(title="Deskemon Backend")
@@ -21,6 +22,7 @@ app.include_router(events_router)
 app.include_router(nudges_router)
 app.include_router(routines_router)
 app.include_router(sensor_logger_router)
+app.include_router(summaries_router)
 
 
 @app.on_event("startup")

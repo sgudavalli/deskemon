@@ -16,7 +16,8 @@ verified working end-to-end:
   continuously), `frontend-companion-app` (the animated companion, `:5173`),
   `frontend-monitor-app` (React/Vite monitoring dashboard, `:5174`),
   `frontend-dashboard-app` (Control Center — configure routine/reminder
-  nudges against the backend `/routines` API, `:5175`)
+  nudges against the backend `/routines` API, `:5175`), `digest-agent`
+  (LLM-powered event summarizer — see the LLM exception note below)
 - **Native, host-run** (macOS only, not containerized — need real
   desktop/GUI access): `desktop-agent/` (real window-focus capture) and
   `notifier-agent/` (real OS notification dispatch). Run manually with
@@ -52,10 +53,17 @@ built (✅) vs. simulated.
   synthetic proxy (tab-switch rate + meeting density), never presented as
   real physiological stress detection. Keep the "(experimental)" prefix
   and this framing if touched.
-- **No LLM calls anywhere in this project** — confirmed early on the
-  rules engine is pure deterministic threshold/interval logic. Don't
-  introduce an LLM call without discussing it first; it wasn't needed for
-  the MVP.
+- **No LLM calls anywhere in this project, with one deliberate exception**:
+  the rules engine remains pure deterministic threshold/interval logic.
+  `digest-agent/` is the sole exception — it calls Claude (via the Claude
+  Agent SDK, with its `WebSearch` tool enabled) to turn raw events into a
+  5-minute summary (written to the `event_summaries` table) and then an
+  hourly narrative "hourly-ingest" nudge (`type="digest"`), because that's
+  inherently a synthesis/writing task, not a threshold check. It's a
+  standalone agent, isolated from the rest of the backend — talks to it only
+  over HTTP (`GET /events`, `GET/POST /summaries`, `POST /nudges`), never
+  touches Postgres directly. Don't introduce an LLM call anywhere else
+  without discussing it first.
 - **Routine reminders are backend-configured, not hardcoded/env-var**: all
   five reminder nudges (sedentary, hydration, meals, medicine, focus
   recovery) are pure interval timers driven by rows in the Postgres
