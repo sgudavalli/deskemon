@@ -9,19 +9,34 @@ See `DESIGN.md` for the full architecture (components vs. agents, data
 model, build order).
 
 Currently built: the backend foundation (events/nudges store, ingest API,
-rules engine) — Phase 1 per `DESIGN.md`. No real capture agents yet; a
-standalone simulator continuously streams fake phone/browser/calendar
-events so the rules engine can be exercised end-to-end in near real time.
+rules engine) — Phase 1 per `DESIGN.md` — plus the first real (non-
+simulated) capture agent: desktop window tracking, with a matching
+notification dispatcher. The simulator still covers phone/browser/calendar
+so the rules engine has continuous data to react to.
 
 ## Stack
 
+Dockerized (`docker compose up -d --build`):
 - `backend/` — FastAPI ingest API + rules engine (Python)
 - `postgres` — events/nudges store, its own container
 - `simulator/` — standalone fake capture-agent service; continuously
   streams phone/browser/calendar events and triggers the rules engine,
-  simulating real agents until they're built (a separate concern from the
-  backend, its own minimal dependencies)
-- `docker-compose.yml` — runs all three together
+  simulating agents not yet built (a separate concern from the backend,
+  its own minimal dependencies)
+- `frontend/` — React + Vite monitoring dashboard: live events feed and
+  nudges list, served by nginx, proxying `/api/*` to the backend
+
+Native, host-run (not containerized — need real desktop/GUI access):
+- `desktop-agent/` — real capture agent: polls the frontmost app/window
+  on macOS every ~5s and posts `desktop`/`window_focus` events. Capture
+  only, one responsibility.
+- `notifier-agent/` — real dispatch agent: polls nudges and fires a
+  native macOS notification for each new one. Dispatch only, kept as a
+  separate process from `desktop-agent` on purpose — each agent does one
+  thing.
+
+`docker-compose.yml` runs the four Dockerized services together; the two
+native agents are started separately (see their own READMEs).
 
 ## Run it
 
@@ -31,14 +46,15 @@ From the repo root:
 docker compose up -d --build
 ```
 
-This starts three containers:
+This starts four containers:
 - `postgres` — the database (backend waits for it to report healthy)
 - `backend` — the API + rules engine, exposed on `http://localhost:8000`
 - `simulator` — starts once backend is healthy; continuously streams fake
   events and periodically triggers the rules engine, so nudges start
   appearing within about a minute
+- `frontend` — the monitoring dashboard, exposed on `http://localhost:5173`
 
-Check all three are up:
+Check all four are up:
 
 ```bash
 docker compose ps
@@ -46,7 +62,20 @@ docker compose logs -f simulator   # watch it stream events + nudges live
 ```
 
 You should see `deskemon-postgres-1` (healthy), `deskemon-backend-1`
-(healthy), and `deskemon-simulator-1` (up), with port `8000` published.
+(healthy), `deskemon-simulator-1` (up), and `deskemon-frontend-1` (up),
+with ports `8000` and `5173` published.
+
+## Monitoring dashboard
+
+Open `http://localhost:5173` — two live-updating panels, polling every 3s:
+- **Events** — the raw incoming event stream (source, type, payload),
+  newest first
+- **Nudges** — generated alerts (type, message, dismissed state), newest
+  first
+
+No Grafana/Prometheus here on purpose: the data is discrete JSON
+events/nudges, not numeric time-series metrics, so a small custom feed/list
+UI is a better fit than a metrics dashboard.
 
 ## Test it end to end
 
@@ -108,6 +137,24 @@ curl http://localhost:8000/nudges | python3 -m json.tool
 docker compose down        # stop containers, keep DB data
 docker compose down -v     # stop containers and wipe DB data
 ```
+
+## Real desktop capture + notifications (optional, native)
+
+With the Docker stack running, in two separate terminals on the host Mac:
+
+```bash
+cd desktop-agent && uv sync && uv run python track.py
+```
+```bash
+cd notifier-agent && uv sync && uv run python notify.py
+```
+
+Switch between real apps/windows — `desktop-agent` posts real
+`window_focus` events, visible in the dashboard's Events feed and via
+`curl "http://localhost:8000/events?source=desktop"`. `notifier-agent`
+watches `/nudges` and fires a real macOS notification banner for each new
+one (it seeds itself against existing nudge history on startup, so it
+won't spam notifications for nudges that already existed before it ran).
 
 ## API reference
 

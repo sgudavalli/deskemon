@@ -46,5 +46,13 @@ services:
       backend:
         condition: service_healthy
 
+  frontend:
+    build: ./frontend
+    ports:
+      - "5173:80"
+    depends_on:
+      backend:
+        condition: service_healthy
+
 volumes:
   deskemon-pgdata:
