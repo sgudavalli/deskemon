@@ -1,0 +1,6 @@
+{
+  "id": "baymax-companion",
+  "displayName": "Baymax Companion",
+  "description": "Your supplied Baymax artwork, faithfully preserved as a static companion.",
+  "spritesheetPath": "spritesheet.webp"
+}
