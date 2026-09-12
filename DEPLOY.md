@@ -73,6 +73,34 @@ nudge history on startup, so it won't spam notifications for nudges that
 already existed before it ran). Stop either any time with `Ctrl+C`,
 independently of the Docker stack.
 
+## Step 3 — Real phone signal via Sensor Logger (optional, adds real GPS/motion)
+
+The Docker stack's `simulator` fakes `phone` events (location/motion) by
+default. To replace that with real data from your phone, the backend
+exposes `POST /webhooks/sensor-logger` (no extra port — rides on the
+existing `8000`), which accepts the [Sensor Logger](https://www.tszheichoi.com/sensorlogger)
+app's HTTP Push payload and maps it into the same `location`/`motion`
+event schema the rules engine already reads.
+
+This only requires action on your phone — see **`USER.md`** for the
+exact steps (find your Mac's LAN IP, configure the app, start recording).
+Nothing else in the Docker stack needs to change; the webhook is already
+live once `backend` is up.
+
+Once configured, verify real events are arriving:
+
+```bash
+curl "http://localhost:8000/events?source=phone" | python3 -m json.tool
+```
+
+Real events never carry a `synthetic` key (fake/simulator events always
+do) — that's also what the monitor dashboard's "Fake events" toggle
+filters on. Set it to **No** at `http://localhost:5174` to see only real
+phone traffic.
+
+Motion sensitivity is tunable via `SENSOR_LOGGER_MOTION_THRESHOLD_MS2` in
+`docker-compose.yml` (default `1.5` m/s² deviation from gravity).
+
 ## Stopping / resetting
 
 ```bash
@@ -104,3 +132,10 @@ Or just run `./reset.sh` from the repo root, which does exactly that.
 - **`docker compose up` fails to parse the compose file**: look for
   literal `<<<<<<<` / `=======` / `>>>>>>>` markers — an unresolved git
   merge conflict.
+- **Sensor Logger events never show up**: confirm your phone and Mac are
+  on the *same* Wi-Fi network (not a guest/isolated network — some
+  routers block device-to-device traffic on guest SSIDs), that the URL in
+  the app matches your Mac's *current* LAN IP (it can change between
+  sessions — re-run `ipconfig getifaddr en0`), and that no firewall on
+  the Mac is blocking inbound connections to port `8000`. See `USER.md`
+  for the phone-side checklist.

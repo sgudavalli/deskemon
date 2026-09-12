@@ -114,7 +114,7 @@ processes, never combined.
 | A2 | Browser extension | Runs inside the browser | Reads active tab URL/title + idle state → posts to C3 on tab-change/focus/idle | simulated only |
 | A3 | Calendar sync worker | Backend-side scheduled process | Pulls Google/Outlook Calendar via OAuth on a schedule → posts meeting events to C3 | simulated only |
 | A4 | Rules engine | Backend-side scheduled process (cron, every 5 min) | Reads recent rows from C1 → computes sedentary score, cognitive-load proxy, reminder triggers → writes rows to C2 | ✅ built |
-| A5 | Sensor Logger app (third-party) | Existing mobile app, not built by us | Streams real GPS/accelerometer data via HTTP webhook → posts to C3 | simulated only |
+| A5 | Sensor Logger app (third-party) | Existing mobile app, not built by us | Streams real GPS/accelerometer data via HTTP webhook → posts to C3 | ✅ built (`POST /webhooks/sensor-logger`) |
 | A6 | Notifier agent | Native script on the work computer (`notifier-agent/`), polling loop | Reads C2 via `GET /nudges` → fires a native OS notification for each new, undismissed nudge | ✅ built |
 | — | Simulator | Dockerized service (`simulator/`) | Fake capture agent standing in for A2/A3/A5 until they're built for real, plus triggers A4 on a fast cadence | ✅ built |
 
@@ -130,7 +130,7 @@ configure/point at C3 rather than write code for.
    real notification dispatch, built as two separate processes)
 5. A2 Browser extension (real digital signal)
 6. A3 Calendar sync worker (enriches A4 with meeting-aware logic)
-7. A5 Sensor Logger app config (real physical signal — last, since it's third-party config, not new code)
+7. ✅ A5 Sensor Logger app config (real physical signal — last, since it's third-party config, not new code)
 
 ## Decisions
 

@@ -53,4 +53,28 @@ seed script, or wait long enough, to see reminder nudges fire instead.
 - `GET /events?since=&source=`
 - `GET /nudges?since=`
 - `POST /rules/run` — run one rules-engine pass on demand
+- `POST /webhooks/sensor-logger` — real phone webhook, see below
 - `GET /health`
+
+## Real phone signal (Sensor Logger app)
+
+The [Sensor Logger](https://www.tszheichoi.com/sensorlogger) app (iOS/Android)
+can push real GPS/accelerometer data straight into this backend, replacing
+the simulator's fake `phone` events. `POST /webhooks/sensor-logger` accepts
+Sensor Logger's native HTTP Push JSON and maps it into our normal
+`location`/`motion` event schema (`app/routes_sensor_logger.py`).
+
+Setup, phone and Mac on the same Wi-Fi:
+
+1. In Sensor Logger: Settings → HTTP Push.
+2. URL: `http://<your-Mac-LAN-IP>:8000/webhooks/sensor-logger` — find your
+   Mac's LAN IP with `ipconfig getifaddr en0`.
+3. Push interval: a few seconds.
+4. Enable the **Location** and **Accelerometer** sensors.
+5. Start recording. Real events show up in `GET /events?source=phone` and
+   in the monitor dashboard with the "Fake events" toggle set to **No**
+   (real events never carry the `synthetic` payload key).
+
+Motion is derived from raw accelerometer magnitude vs. gravity; the
+sensitivity is `SENSOR_LOGGER_MOTION_THRESHOLD_MS2` (default `1.5` m/s²,
+set in `docker-compose.yml`).

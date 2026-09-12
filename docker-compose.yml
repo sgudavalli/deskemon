@@ -29,6 +29,9 @@ services:
       - REMINDER_HYDRATION_INTERVAL_MIN=2
       - REMINDER_FOOD_INTERVAL_MIN=3
       - REMINDER_MEDICINE_INTERVAL_MIN=4
+      # Motion-detection sensitivity for real Sensor Logger accelerometer
+      # data (m/s^2 deviation from gravity to count as "moving").
+      - SENSOR_LOGGER_MOTION_THRESHOLD_MS2=1.5
     depends_on:
       postgres:
         condition: service_healthy
