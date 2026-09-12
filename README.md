@@ -45,8 +45,8 @@ native agents on your Mac:
 
 1. **Docker stack** (always required): `docker compose up -d --build`
    from the repo root. Brings up `postgres`, `backend`, `simulator`,
-   `frontend`. This alone gives you a fully working demo driven by fake
-   data — no Mac-specific setup needed.
+   `frontend-monitor-app`. This alone gives you a fully working demo
+   driven by fake data — no Mac-specific setup needed.
 2. **Native agents** (optional, macOS only, adds real signal): in two
    separate terminals, `cd desktop-agent && uv sync && uv run python
    track.py` and `cd notifier-agent && uv sync && uv run python
@@ -74,7 +74,7 @@ This starts four containers:
 - `simulator` — starts once backend is healthy; continuously streams fake
   events and periodically triggers the rules engine, so nudges start
   appearing within about a minute
-- `frontend` — the monitoring dashboard, exposed on `http://localhost:5173`
+- `frontend-monitor-app` — the monitoring dashboard, exposed on `http://localhost:5173`
 
 Check all four are up:
 
@@ -84,8 +84,8 @@ docker compose logs -f simulator   # watch it stream events + nudges live
 ```
 
 You should see `deskemon-postgres-1` (healthy), `deskemon-backend-1`
-(healthy), `deskemon-simulator-1` (up), and `deskemon-frontend-1` (up),
-with ports `8000` and `5173` published.
+(healthy), `deskemon-simulator-1` (up), and `deskemon-frontend-monitor-app-1`
+(up), with ports `8000` and `5173` published.
 
 ## Monitoring dashboard
 
@@ -172,6 +172,17 @@ curl http://localhost:8000/nudges | python3 -m json.tool
 docker compose down        # stop containers, keep DB data
 docker compose down -v     # stop containers and wipe DB data
 ```
+
+**Full reset** (wipe everything — containers, DB volume, images — and
+rebuild from scratch):
+
+```bash
+docker compose down -v --remove-orphans
+docker compose build --no-cache
+docker compose up -d
+```
+
+Or just run `./reset.sh` from the repo root, which does exactly that.
 
 ## Real desktop capture + notifications (optional, native)
 
