@@ -41,13 +41,13 @@ native agents are started separately (see their own READMEs).
 
 ## Deployment (full local setup)
 
-Two parts, run in order — the Docker stack first, then (optionally) the
-native agents on your Mac:
+See **`DEPLOY.md`** for full step-by-step deployment instructions
+(Docker stack, native agents, ports, troubleshooting). Quick summary:
 
 1. **Docker stack** (always required): `docker compose up -d --build`
    from the repo root. Brings up `postgres`, `backend`, `simulator`,
-   `frontend-monitor-app`. This alone gives you a fully working demo
-   driven by fake data — no Mac-specific setup needed.
+   `frontend-companion-app`, `frontend-monitor-app`. This alone gives you
+   a fully working demo driven by fake data — no Mac-specific setup needed.
 2. **Native agents** (optional, macOS only, adds real signal): in two
    separate terminals, `cd desktop-agent && uv sync && uv run python
    track.py` and `cd notifier-agent && uv sync && uv run python
@@ -59,7 +59,7 @@ native agents on your Mac:
 
 There's nothing to deploy beyond your own machine for this project — no
 cloud target, no remote server. "Deployment" here means "get all of the
-above running locally." Full details for each part below.
+above running locally."
 
 ## Run it
 
@@ -69,18 +69,16 @@ From the repo root:
 docker compose up -d --build
 ```
 
-This starts four containers:
+This starts five containers:
 - `postgres` — the database (backend waits for it to report healthy)
 - `backend` — the API + rules engine, exposed on `http://localhost:8000`
 - `simulator` — starts once backend is healthy; continuously streams fake
   events and periodically triggers the rules engine, so nudges start
   appearing within about a minute
-- `frontend-monitor-app` — the monitoring dashboard, exposed on `http://localhost:5173`
-
-- Deskemon companion at `http://localhost:5173`
-- Engineering monitor at `http://localhost:5174`
-- Backend API at `http://localhost:8000`
-- PostgreSQL and the event simulator
+- `frontend-companion-app` — the animated Deskemon companion, exposed on
+  `http://localhost:5173`
+- `frontend-monitor-app` — the engineering monitoring dashboard, exposed
+  on `http://localhost:5174`
 
 The companion remains deliberately demo-safe: its core judge scenario is seeded
 and can run even if a live integration is unavailable. The backend, simulator,
@@ -95,8 +93,9 @@ docker compose logs -f simulator   # watch it stream events + nudges live
 ```
 
 You should see `deskemon-postgres-1` (healthy), `deskemon-backend-1`
-(healthy), `deskemon-simulator-1` (up), and `deskemon-frontend-monitor-app-1`
-(up), with ports `8000` and `5173` published.
+(healthy), `deskemon-simulator-1` (up), `deskemon-frontend-companion-app-1`
+(up), and `deskemon-frontend-monitor-app-1` (up), with ports `8000`, `5173`,
+and `5174` published.
 
 ## Monitoring dashboard
 
