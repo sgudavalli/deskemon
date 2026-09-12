@@ -20,7 +20,7 @@ From the repo root:
 docker compose up -d --build
 ```
 
-This brings up five containers:
+This brings up six containers:
 
 | Service | Purpose | Host port |
 |---|---|---|
@@ -29,8 +29,9 @@ This brings up five containers:
 | `simulator` | streams fake phone/browser/calendar events continuously | — (internal only) |
 | `frontend-companion-app` | the animated companion, judge-facing product | `5173` |
 | `frontend-monitor-app` | engineering dashboard for raw events/nudges | `5174` |
+| `frontend-dashboard-app` | Control Center — configure routine/reminder nudges | `5175` |
 
-`backend` waits for `postgres` to report healthy; `simulator` and both
+`backend` waits for `postgres` to report healthy; `simulator` and all three
 frontends wait for `backend` to report healthy. No two services share a
 host port — safe to bring the whole stack up in one shot.
 
@@ -43,12 +44,13 @@ curl http://localhost:8000/health
 docker compose logs -f simulator   # watch it stream events + nudges live
 ```
 
-You should see all five containers listed, with `postgres` and `backend`
+You should see all six containers listed, with `postgres` and `backend`
 reporting `healthy`.
 
 Open:
 - Deskemon companion: `http://localhost:5173`
 - Engineering monitor: `http://localhost:5174`
+- Control Center (routines): `http://localhost:5175`
 - Backend API: `http://localhost:8000`
 
 ## Step 2 — Native agents (optional, macOS only, adds real signal)
@@ -122,13 +124,14 @@ Or just run `./reset.sh` from the repo root, which does exactly that.
 ## Troubleshooting
 
 - **Port already in use / container fails to bind a port**: check nothing
-  else on your machine is already listening on `5432`, `8000`, `5173`, or
-  `5174` (`lsof -i :<port>`). `docker-compose.yml` should define exactly
-  five services (`postgres`, `backend`, `simulator`,
-  `frontend-companion-app`, `frontend-monitor-app`), each with a distinct
-  host port — if you see duplicate or conflicting `ports:` entries after
-  a merge, that's a sign of leftover merge-conflict duplication and
-  should be cleaned up back to this 5-service shape.
+  else on your machine is already listening on `5432`, `8000`, `5173`,
+  `5174`, or `5175` (`lsof -i :<port>`). `docker-compose.yml` should define
+  exactly six services (`postgres`, `backend`, `simulator`,
+  `frontend-companion-app`, `frontend-monitor-app`,
+  `frontend-dashboard-app`), each with a distinct host port — if you see
+  duplicate or conflicting `ports:` entries after a merge, that's a sign
+  of leftover merge-conflict duplication and should be cleaned up back to
+  this 6-service shape.
 - **`docker compose up` fails to parse the compose file**: look for
   literal `<<<<<<<` / `=======` / `>>>>>>>` markers — an unresolved git
   merge conflict.

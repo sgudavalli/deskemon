@@ -28,3 +28,34 @@ class NudgeOut(BaseModel):
     type: str
     message: str
     dismissed: bool
+
+
+class RoutineIn(BaseModel):
+    id: str
+    name: str
+    description: str
+    icon: str
+    enabled: bool
+    every: float
+    unit: str  # minutes | hours | daily
+    activeStart: str
+    activeEnd: str
+    quietStart: str
+    quietEnd: str
+    interruption: str  # quiet | gentle | important
+    contextAware: bool
+
+
+class RoutinePatch(BaseModel):
+    name: Optional[str] = None
+    description: Optional[str] = None
+    icon: Optional[str] = None
+    enabled: Optional[bool] = None
+    every: Optional[float] = None
+    unit: Optional[str] = None
+    activeStart: Optional[str] = None
+    activeEnd: Optional[str] = None
+    quietStart: Optional[str] = None
+    quietEnd: Optional[str] = None
+    interruption: Optional[str] = None
+    contextAware: Optional[bool] = None

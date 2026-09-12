@@ -1,8 +1,12 @@
 # Deskemon Control Center
 
-Frontend-only configuration dashboard for routines, app connections, privacy,
-and autonomy boundaries. All changes persist in the browser through local
-storage. No live service connection is implied.
+Configuration dashboard for routines, app connections, privacy, and autonomy
+boundaries. **Routines** are backend-owned: they're read/written through the
+backend's `GET/POST /routines` and `PUT /routines/{id}` API (proxied via
+`/api` — see `vite.config.ts` in dev, `nginx.conf` in the Docker build), so
+changes take effect in the rules engine immediately. Connections, privacy,
+and activity are still frontend-only prototypes — those changes persist in
+the browser through local storage and imply no live service connection.
 
 ```bash
 npm install

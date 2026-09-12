@@ -19,6 +19,8 @@ to say or needs the user's approval.
 - `simulator/` — simulated phone, browser, and calendar inputs for a reliable demo.
 - `frontend-monitor-app/` — Shiva's engineering dashboard for inspecting raw
   events and nudges. This is an internal debugging surface, not the product UI.
+- `frontend-dashboard-app/` — Deskemon Control Center: configure routine/reminder
+  nudges (interval, enabled, context-aware) against the backend's `/routines` API.
 - `frontend-companion-app/assets/` — character references and Codex pet motion assets.
 - `frontend-companion-app/docs/` — scenario, interaction, integration, and UI documentation.
 
@@ -69,7 +71,7 @@ From the repo root:
 docker compose up -d --build
 ```
 
-This starts five containers:
+This starts six containers:
 - `postgres` — the database (backend waits for it to report healthy)
 - `backend` — the API + rules engine, exposed on `http://localhost:8000`
 - `simulator` — starts once backend is healthy; continuously streams fake
@@ -79,6 +81,8 @@ This starts five containers:
   `http://localhost:5173`
 - `frontend-monitor-app` — the engineering monitoring dashboard, exposed
   on `http://localhost:5174`
+- `frontend-dashboard-app` — the Control Center for configuring routine
+  reminders, exposed on `http://localhost:5175`
 
 The companion remains deliberately demo-safe: its core judge scenario is seeded
 and can run even if a live integration is unavailable. The backend, simulator,
@@ -94,8 +98,19 @@ docker compose logs -f simulator   # watch it stream events + nudges live
 
 You should see `deskemon-postgres-1` (healthy), `deskemon-backend-1`
 (healthy), `deskemon-simulator-1` (up), `deskemon-frontend-companion-app-1`
-(up), and `deskemon-frontend-monitor-app-1` (up), with ports `8000`, `5173`,
-and `5174` published.
+(up), `deskemon-frontend-monitor-app-1` (up), and
+`deskemon-frontend-dashboard-app-1` (up), with ports `8000`, `5173`, `5174`,
+and `5175` published.
+
+## Routines (Control Center)
+
+Open `http://localhost:5175` to enable/disable reminder-style nudges
+(sedentary, hydration, meals, medicine, focus recovery), change their
+interval, and toggle whether each one is suppressed during calendar
+meetings ("context aware"). This reads/writes the backend's `GET/POST
+/routines` and `PUT /routines/{id}` endpoints directly (Postgres-backed,
+seeded with demo-fast intervals on first boot) — changes take effect on
+the next rules-engine pass, no restart needed.
 
 ## Monitoring dashboard
 

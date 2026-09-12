@@ -21,14 +21,9 @@ services:
       - "8000:8000"
     environment:
       - DATABASE_URL=postgresql://deskemon:deskemon@postgres:5432/deskemon
-      # Fast demo cadences (minutes) so simulate_live.py produces visible
-      # nudges within a couple minutes instead of real-world timescales.
-      - SEDENTARY_WINDOW_MIN=2
-      - COGNITIVE_LOAD_WINDOW_MIN=1
-      - COGNITIVE_LOAD_TAB_SWITCH_THRESHOLD=8
-      - REMINDER_HYDRATION_INTERVAL_MIN=2
-      - REMINDER_FOOD_INTERVAL_MIN=3
-      - REMINDER_MEDICINE_INTERVAL_MIN=4
+      # Routine nudge intervals/toggles now live in Postgres (routine_configs
+      # table, seeded on first boot) and are editable via /routines and the
+      # Control Center UI instead of env vars.
       # Motion-detection sensitivity for real Sensor Logger accelerometer
       # data (m/s^2 deviation from gravity to count as "moving").
       - SENSOR_LOGGER_MOTION_THRESHOLD_MS2=1.5
@@ -63,6 +58,15 @@ services:
     build: ./frontend-monitor-app
     ports:
       - "5174:80"
+    depends_on:
+      backend:
+        condition: service_healthy
+
+  frontend-dashboard-app:
+    # Deskemon Control Center — routine/reminder configuration UI.
+    build: ./frontend-dashboard-app
+    ports:
+      - "5175:80"
     depends_on:
       backend:
         condition: service_healthy

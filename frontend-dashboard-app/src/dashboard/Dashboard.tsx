@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState, type FormEvent, type ReactNode } from 'react';
+import { createRoutine as apiCreateRoutine, getRoutines, updateRoutine as apiUpdateRoutine } from './api';
 import { DEFAULT_DASHBOARD_STATE } from './defaults';
 import type {
   ActivityEntry,
@@ -35,13 +36,15 @@ const SECTION_COPY: Record<DashboardSection, { title: string; description: strin
   },
 };
 
+// Routines are backend-owned (see ./api); only these three sections still
+// persist to localStorage in this prototype.
 function loadState(): DashboardState {
   try {
     const saved = localStorage.getItem(STORAGE_KEY);
     if (!saved) return DEFAULT_DASHBOARD_STATE;
     const parsed = JSON.parse(saved) as Partial<DashboardState>;
     return {
-      routines: parsed.routines ?? DEFAULT_DASHBOARD_STATE.routines,
+      routines: DEFAULT_DASHBOARD_STATE.routines,
       connections: parsed.connections ?? DEFAULT_DASHBOARD_STATE.connections,
       privacy: { ...DEFAULT_DASHBOARD_STATE.privacy, ...parsed.privacy },
       activity: parsed.activity ?? DEFAULT_DASHBOARD_STATE.activity,
@@ -147,7 +150,18 @@ export function Dashboard() {
   const [connectingId, setConnectingId] = useState<string | null>(null);
   const [toast, setToast] = useState<string | null>(null);
 
-  useEffect(() => localStorage.setItem(STORAGE_KEY, JSON.stringify(model)), [model]);
+  useEffect(() => {
+    const { connections, privacy, activity } = model;
+    localStorage.setItem(STORAGE_KEY, JSON.stringify({ connections, privacy, activity }));
+  }, [model]);
+
+  useEffect(() => {
+    getRoutines()
+      .then((routines) => setModel((current) => ({ ...current, routines })))
+      .catch(() => {
+        // Backend unreachable — keep the local prototype defaults.
+      });
+  }, []);
 
   const notify = useCallback((text: string) => {
     setToast(text);
@@ -165,6 +179,14 @@ export function Dashboard() {
     setModel((current) => ({ ...current, routines: current.routines.map((routine) => routine.id === id ? { ...routine, ...patch } : routine) }));
     if (log) addActivity(log, 'Routine configuration changed in this browser.', 'success');
   }, [addActivity]);
+
+  const persistRoutine = useCallback((id: string, patch: Partial<Routine>) => {
+    apiUpdateRoutine(id, patch)
+      .then((routine) => setModel((current) => ({ ...current, routines: current.routines.map((r) => (r.id === id ? routine : r)) })))
+      .catch(() => {
+        // Backend unreachable — local state already reflects the change.
+      });
+  }, []);
 
   const updateConnection = useCallback((id: string, patch: Partial<Connection>) => {
     setModel((current) => ({ ...current, connections: current.connections.map((connection) => connection.id === id ? { ...connection, ...patch } : connection) }));
@@ -212,14 +234,14 @@ export function Dashboard() {
         <header className="dashboard-header"><div><span className="eyebrow">DESKEMON · LOCAL PROTOTYPE</span><h1>{copy.title}</h1><p>{copy.description}</p></div><div className="header-actions"><span className="saved-state"><Icon name="check" size={15} />Saved locally</span><a className="round-link" href={COMPANION_URL} aria-label="Open companion"><Icon name="external" size={19} /></a></div></header>
 
         {section === 'overview' && <Overview routines={activeRoutines} connections={connectedApps} activity={model.activity} onOpenRoutines={() => setSection('routines')} onOpenConnections={() => setSection('connections')} />}
-        {section === 'routines' && <Routines routines={model.routines} onSelect={setSelectedRoutineId} onToggle={(routine) => { updateRoutine(routine.id, { enabled: !routine.enabled }, `${routine.name} ${routine.enabled ? 'paused' : 'enabled'}`); notify(`${routine.name} ${routine.enabled ? 'paused' : 'enabled'}`); }} onAdd={() => setShowAddRoutine(true)} />}
+        {section === 'routines' && <Routines routines={model.routines} onSelect={setSelectedRoutineId} onToggle={(routine) => { updateRoutine(routine.id, { enabled: !routine.enabled }, `${routine.name} ${routine.enabled ? 'paused' : 'enabled'}`); persistRoutine(routine.id, { enabled: !routine.enabled }); notify(`${routine.name} ${routine.enabled ? 'paused' : 'enabled'}`); }} onAdd={() => setShowAddRoutine(true)} />}
         {section === 'connections' && <Connections connections={model.connections} connectingId={connectingId} onSelect={setSelectedConnectionId} onConnect={connect} />}
         {section === 'privacy' && <Privacy settings={model.privacy} onChange={updatePrivacy} onReset={() => { localStorage.removeItem(STORAGE_KEY); setModel(DEFAULT_DASHBOARD_STATE); notify('Prototype settings restored'); }} />}
       </main>
 
-      {selectedRoutine && <RoutineEditor routine={selectedRoutine} onClose={() => setSelectedRoutineId(null)} onChange={(patch) => updateRoutine(selectedRoutine.id, patch)} onSave={() => { addActivity(`${selectedRoutine.name} updated`, scheduleLabel(selectedRoutine), 'success'); setSelectedRoutineId(null); notify('Routine saved'); }} />}
+      {selectedRoutine && <RoutineEditor routine={selectedRoutine} onClose={() => setSelectedRoutineId(null)} onChange={(patch) => updateRoutine(selectedRoutine.id, patch)} onSave={() => { persistRoutine(selectedRoutine.id, selectedRoutine); addActivity(`${selectedRoutine.name} updated`, scheduleLabel(selectedRoutine), 'success'); setSelectedRoutineId(null); notify('Routine saved'); }} />}
       {selectedConnection && <ConnectionEditor connection={selectedConnection} onClose={() => setSelectedConnectionId(null)} onChange={(patch) => updateConnection(selectedConnection.id, patch)} onConnect={() => connect(selectedConnection)} />}
-      {showAddRoutine && <AddRoutine onClose={() => setShowAddRoutine(false)} onAdd={(routine) => { setModel((current) => ({ ...current, routines: [...current.routines, routine] })); addActivity(`${routine.name} created`, scheduleLabel(routine), 'success'); setShowAddRoutine(false); notify('New routine created'); }} />}
+      {showAddRoutine && <AddRoutine onClose={() => setShowAddRoutine(false)} onAdd={(routine) => { setModel((current) => ({ ...current, routines: [...current.routines, routine] })); apiCreateRoutine(routine).catch(() => {}); addActivity(`${routine.name} created`, scheduleLabel(routine), 'success'); setShowAddRoutine(false); notify('New routine created'); }} />}
       {toast && <div className="dashboard-toast"><Icon name="check" size={17} />{toast}</div>}
     </div>
   );

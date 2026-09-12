@@ -53,8 +53,32 @@ seed script, or wait long enough, to see reminder nudges fire instead.
 - `GET /events?since=&source=`
 - `GET /nudges?since=`
 - `POST /rules/run` — run one rules-engine pass on demand
+- `GET /routines` / `POST /routines` / `PUT /routines/{id}` — configure
+  reminder routines (interval, enabled, interruption, context-aware); see
+  below
 - `POST /webhooks/sensor-logger` — real phone webhook, see below
 - `GET /health`
+
+## Routine configuration (Control Center)
+
+The five reminder-style nudges (sedentary, hydration, meals, medicine,
+focus recovery) are pure interval timers driven entirely by rows in the
+`routine_configs` table — no event capture involved. They're seeded with
+demo-fast intervals on first boot (`app/db.py`'s `DEFAULT_ROUTINES`) and
+are configurable at runtime via the API or the
+`frontend-dashboard-app` Control Center UI (`http://localhost:5175`):
+
+- `enabled` — pauses/resumes the routine
+- `every` / `unit` (`minutes`/`hours`/`daily`) — the reminder interval
+- `contextAware` — when true, suppresses the nudge while a calendar
+  meeting is in progress (reuses the same meeting-detection logic as
+  before)
+
+`app/rules_engine.py`'s `check_routines` reads this table once per
+scheduler pass; there are no more `SEDENTARY_WINDOW_MIN` /
+`REMINDER_*_INTERVAL_MIN` env vars — those are gone, replaced by this
+config. Active/quiet-hour time windows are stored (for UI parity) but not
+yet enforced — interval + enabled + context-aware only, for now.
 
 ## Real phone signal (Sensor Logger app)
 

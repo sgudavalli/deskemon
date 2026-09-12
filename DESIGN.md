@@ -55,7 +55,7 @@ sensors / extension / agent / calendar
 ```mermaid
 flowchart LR
     subgraph Capture agents
-        A1[Mobile sensor app<br/>location + motion]
+        A1[Mobile sensor app<br/>location + motion, real ✅]
         A2[Browser extension<br/>tab / idle events]
         A3[Desktop capture agent<br/>active window, real ✅]
         A4[Calendar sync worker<br/>OAuth pull, scheduled]

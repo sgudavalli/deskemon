@@ -13,15 +13,19 @@ verified working end-to-end:
 - **Dockerized** (`docker compose up -d --build` from repo root):
   `postgres`, `backend` (FastAPI ingest API + rules engine), `simulator`
   (fake phone/browser/calendar events, drives the rules engine
-  continuously), `frontend-monitor-app` (React/Vite monitoring dashboard on `:5173`)
+  continuously), `frontend-companion-app` (the animated companion, `:5173`),
+  `frontend-monitor-app` (React/Vite monitoring dashboard, `:5174`),
+  `frontend-dashboard-app` (Control Center — configure routine/reminder
+  nudges against the backend `/routines` API, `:5175`)
 - **Native, host-run** (macOS only, not containerized — need real
   desktop/GUI access): `desktop-agent/` (real window-focus capture) and
   `notifier-agent/` (real OS notification dispatch). Run manually with
   `uv run python track.py` / `uv run python notify.py` in separate
   terminals, alongside the Docker stack.
 
-Not yet built: real browser extension (A2), real calendar sync (A3), real
-mobile/Sensor Logger wiring (A5) — all still simulated by `simulator/`.
+Not yet built: real browser extension (A2), real calendar sync (A3) — still
+simulated by `simulator/`. A5 (Sensor Logger, real GPS/motion) is built —
+see `backend/app/routes_sensor_logger.py` and `USER.md`.
 See `DESIGN.md`'s Components/Agents tables and build order for what's
 built (✅) vs. simulated.
 
@@ -52,11 +56,17 @@ built (✅) vs. simulated.
   rules engine is pure deterministic threshold/interval logic. Don't
   introduce an LLM call without discussing it first; it wasn't needed for
   the MVP.
-- **Demo-fast thresholds**: `docker-compose.yml` overrides the rules
-  engine's real-world thresholds (30min sedentary, etc.) down to
-  minutes/seconds via env vars, purely so demos don't require waiting.
-  See `backend/app/rules_engine.py` for the env var names and real
-  defaults.
+- **Routine reminders are backend-configured, not hardcoded/env-var**: all
+  five reminder nudges (sedentary, hydration, meals, medicine, focus
+  recovery) are pure interval timers driven by rows in the Postgres
+  `routine_configs` table (`backend/app/db.py`'s `DEFAULT_ROUTINES`),
+  editable at runtime via `GET/POST /routines` + `PUT /routines/{id}` or
+  the `frontend-dashboard-app` Control Center UI (`:5175`). No event
+  capture is involved and there are no more `SEDENTARY_WINDOW_MIN` /
+  `REMINDER_*_INTERVAL_MIN` env vars — those were removed from
+  `docker-compose.yml` in favor of this config. Defaults are seeded with
+  demo-fast intervals (minutes, not the real-world 30min/60min/etc.) so
+  demos don't require waiting.
 
 ## Where things are documented
 
@@ -69,11 +79,13 @@ built (✅) vs. simulated.
 
 ## Gotchas hit before (don't reintroduce)
 
-- Sedentary-check bug: comparing a `location` event's lat/lon against the
-  *previous* event's payload even when that previous event was a `motion`
-  reading (no lat/lon) caused false "movement detected". Fixed in
-  `backend/app/rules_engine.py`'s `check_sedentary` — only compare
-  consecutive `location` payloads to each other.
+- Sedentary-check bug (historical — this event-based check was later
+  replaced by the interval-based `routine_configs` system above):
+  comparing a `location` event's lat/lon against the *previous* event's
+  payload even when that previous event was a `motion` reading (no
+  lat/lon) caused false "movement detected". If event-based movement
+  detection is ever reintroduced, only compare consecutive `location`
+  payloads to each other, not `location` against `motion`.
 - Notifier-agent startup storm: on first run it originally treated ALL
   pre-existing nudges as "new" and fired a notification for every one.
   Fixed by seeding the seen-set from the first fetch silently before
