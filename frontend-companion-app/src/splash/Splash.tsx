@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import wavingPet from '../../assets/pet/motions/waving.gif';
+import { unlockVoicePlayback } from '../audio/voice';
 import { TransparentPet } from './TransparentPet';
 import './splash.css';
 
@@ -8,6 +9,7 @@ export function Splash({ onEnter }: { onEnter: () => void }) {
 
   const enterCompanion = () => {
     if (leaving) return;
+    unlockVoicePlayback();
     setLeaving(true);
     window.setTimeout(onEnter, 640);
   };
