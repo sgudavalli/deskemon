@@ -23,7 +23,7 @@ Dockerized (`docker compose up -d --build`):
   streams phone/browser/calendar events and triggers the rules engine,
   simulating agents not yet built (a separate concern from the backend,
   its own minimal dependencies)
-- `frontend/` — React + Vite monitoring dashboard: live events feed and
+- `frontend-monitor-app/` — React + Vite monitoring dashboard: live events feed and
   nudges list, served by nginx, proxying `/api/*` to the backend
 
 Native, host-run (not containerized — need real desktop/GUI access):
