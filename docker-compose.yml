@@ -46,8 +46,14 @@ services:
       backend:
         condition: service_healthy
 
+<<<<<<< HEAD
   frontend-monitor-app:
     build: ./frontend-monitor-app
+=======
+  frontend:
+    # The animated companion is the user-facing product and visual source of truth.
+    build: ./frontend-companion-app
+>>>>>>> cc969b0159bcb37d81f427c6d0700837a316243c
     ports:
       - "5173:80"
     depends_on:

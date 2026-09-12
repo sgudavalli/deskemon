@@ -19,14 +19,14 @@ the same repository. They are not yet wired into the companion UI.
 | 4 | `docs/SCENARIOS.md` | All ten scenarios, beat by beat, with timings. |
 | 5 | `docs/UI-GUIDE.md` | Design system with measured contrast data. |
 | 6 | `docs/INTEGRATIONS.md` | Exactly what is real vs simulated. |
-| 7 | `DESIGN.md` | Champ's wider input architecture (sensors, extension, agent). See §7. |
+| 7 | `../DESIGN.md` | Champ's wider input architecture (sensors, extension, agent). See §7. |
 
 ---
 
 ## 2. Run it
 
 ```bash
-cd app
+cd frontend-companion-app
 npm install
 npm run dev -- --host
 ```
@@ -69,7 +69,7 @@ Consequences that run through every file:
 ## 4. Architecture
 
 ```
-app/src/
+src/
   face/          The face engine — geometry, not images
     types.ts       EyeShape, Modifier, FaceGeometry, ExpressionName
     expressions.ts The 20 named expressions as deltas from neutral
@@ -98,7 +98,7 @@ app/src/
   Deskemon.tsx     The live companion screen
 ```
 
-Repository services outside `app/`:
+Repository services outside `frontend-companion-app/`:
 
 ```text
 backend/               FastAPI event store and rules engine
@@ -108,16 +108,16 @@ simulator/             Seeded phone, browser, and calendar events
 frontend-monitor-app/  Internal raw-event and nudge inspector
 ```
 
-The Docker `frontend` service builds `app/`; the engineering monitor is a
-separate service. The companion is the product UI and its visual decisions are
-authoritative.
+The Docker `frontend` service builds `frontend-companion-app/`; the engineering
+monitor is a separate service. The companion is the product UI and its visual
+decisions are authoritative.
 
 ### The registry is the important file
 
 `scenarios/registry.ts` defines every scenario as data — beats, timings,
 expressions, panels, and a director's note per beat. It drives **both** the live
 simulator and `docs/SCENARIOS.md` (generated via
-`node scripts-gen-scenarios.mjs` from `app/`), so the spec and the running code
+`node scripts-gen-scenarios.mjs` from `frontend-companion-app/`), so the spec and the running code
 cannot drift.
 
 **To change an animation, edit the registry and regenerate the doc.** Do not
@@ -176,7 +176,7 @@ the screen. Same character, three levels of insistence. Keep that gradient.
 
 ## 7. Reconciling with `DESIGN.md`
 
-`DESIGN.md` describes a wider input architecture — phone GPS/motion, a browser
+`../DESIGN.md` describes a wider input architecture — phone GPS/motion, a browser
 extension, a desktop agent, calendar OAuth, all writing to one events table
 feeding a rules engine.
 
@@ -184,7 +184,7 @@ feeding a rules engine.
 adapter interfaces in `adapters/index.ts` are exactly the seam where that events
 store would plug in:
 
-| `DESIGN.md` source | Adapter it would feed |
+| `../DESIGN.md` source | Adapter it would feed |
 |---|---|
 | Phone motion/GPS | `physicalPresenceSource` |
 | Desktop agent, browser extension | `codexStateSource`, `physicalPresenceSource` |
@@ -200,7 +200,7 @@ The rules engine decides *when*; the registry decides *what it looks like*.
 Stated plainly so nobody assumes otherwise.
 
 - **The companion is not connected to the backend yet.** The repository now
-  includes a FastAPI event store and rules engine, but `app/` still uses its
+  includes a FastAPI event store and rules engine, but `frontend-companion-app/` still uses its
   seeded TypeScript adapters.
 - **No live companion integrations.** Calendar, Slack, Codex state and
   transcription in the companion are seeded. Nothing is sent to Slack; no
