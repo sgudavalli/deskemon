@@ -26,6 +26,7 @@ import {
 } from './adapters/seeded';
 import type { Commitment, SlackPresence, TranscriptLine } from './state/types';
 import { DemoController } from './demo/DemoController';
+import { preloadVoiceCues, speakCue, unlockVoicePlayback, VOICE_COPY } from './audio/voice';
 
 const PRESENCE_LABEL: Record<SlackPresence, string> = {
   available: 'Slack · Available',
@@ -90,10 +91,33 @@ export function Deskemon() {
 
   useEffect(() => adapters.slack.subscribe(setSlack), [adapters]);
 
+  useEffect(() => {
+    if (shootMode) preloadVoiceCues(['water', 'conflict']);
+  }, [shootMode]);
+
+  const performVoiceCue = useCallback((cue: 'water' | 'conflict', settleState: UIState) => {
+    if (cue === 'conflict') setState('speaking');
+    let t = 0;
+    const pulse = window.setInterval(() => {
+      t += 0.1;
+      setEnergy(0.3 + 0.36 * Math.abs(Math.sin(t * 2.25)));
+    }, 100);
+    timers.current.push(pulse as unknown as number);
+
+    void speakCue(cue).finally(() => {
+      clearInterval(pulse);
+      setEnergy(0);
+      setState(settleState);
+    });
+  }, []);
+
   // Video-shoot timeline: one splash touch, then one wake touch.
   useEffect(() => {
     if (!shootMode) return;
-    after(3000, () => setShowHydration(true));
+    after(3000, () => {
+      setShowHydration(true);
+      performVoiceCue('water', 'attentive');
+    });
     after(8000, () => setShowHydration(false));
     after(12000, () => {
       setState('sleeping');
@@ -101,7 +125,7 @@ export function Deskemon() {
     });
 
     return clearTimers;
-  }, [after, clearTimers, shootMode]);
+  }, [after, clearTimers, performVoiceCue, shootMode]);
 
   // Thinking copy cycles through truthful stages.
   useEffect(() => {
@@ -233,6 +257,7 @@ export function Deskemon() {
 
   const wakeShootStory = useCallback(() => {
     if (!shootMode || !shootReadyToWake) return;
+    unlockVoicePlayback();
     clearTimers();
     setShootReadyToWake(false);
     setShootConflict(false);
@@ -258,10 +283,10 @@ export function Deskemon() {
     after(6800, () => {
       setLines([]);
       setShootConflict(true);
-      setState('conflict');
-      setCaption('That overlaps with the Hackathon demo. Want me to move the prototypes to 6 PM?');
+      setCaption(VOICE_COPY.conflict);
+      performVoiceCue('conflict', 'conflict');
     });
-  }, [after, clearTimers, shootMode, shootReadyToWake]);
+  }, [after, clearTimers, performVoiceCue, shootMode, shootReadyToWake]);
 
   const label = shootMode && state === 'sleeping'
     ? 'Tap to wake me'
@@ -436,8 +461,8 @@ export function Deskemon() {
           </div>
           <div>
             <span>WELLBEING · NOW</span>
-            <strong>Time for some water</strong>
-            <p>You’ve been focused for a while. Take a sip—I’ll keep your place.</p>
+            <strong>Quick hydration check</strong>
+            <p>You’ve been in focus mode for a while. Take a sip—I’ll hold your place.</p>
           </div>
           <div className="shoot-hydration-timer" aria-hidden="true"><span /></div>
         </aside>
@@ -498,10 +523,10 @@ export function Deskemon() {
 
       {shootConflict && (
         <Sheet accent="coral">
-          <SheetTitle>That clashes with right now</SheetTitle>
-          <FactRow label="You committed to" value="Final prototypes · 5:00 PM" />
-          <FactRow label="But you're in" value="Hackathon demo · Now–6:00 PM" tone="coral" />
-          <FactRow label="Suggested" value="Move final prototypes to 6:00 PM" tone="teal" />
+          <SheetTitle>That conflicts with your demo</SheetTitle>
+          <FactRow label="New commitment" value="Final prototypes · 5:00 PM" />
+          <FactRow label="Current context" value="Hackathon demo · Now–6:00 PM" tone="coral" />
+          <FactRow label="Best next move" value="Shift final prototypes to 6:00 PM" tone="teal" />
           <Actions>
             <Button kind="primary">Move to 6:00 PM</Button>
             <Button kind="secondary">Keep 5:00 PM</Button>
