@@ -209,6 +209,7 @@ export function Deskemon() {
 
   return (
     <div
+      className="companion-app"
       style={{
         position: 'fixed',
         inset: 0,
@@ -218,6 +219,7 @@ export function Deskemon() {
     >
       {/* ---- The face fills the screen. It IS the interface. ---- */}
       <div
+        className={`companion-face-stage${panelOpen ? ' panel-open' : ''}`}
         style={{
           position: 'absolute',
           top: 0,
@@ -229,7 +231,7 @@ export function Deskemon() {
           transition: 'right 420ms cubic-bezier(0.16, 1, 0.3, 1)',
         }}
       >
-        <div style={{ width: '100%', height: panelOpen ? '46%' : '72%', transition: 'height 420ms cubic-bezier(0.16,1,0.3,1)' }}>
+        <div className="companion-face-canvas" style={{ width: '100%', height: panelOpen ? '46%' : '72%', transition: 'height 420ms cubic-bezier(0.16,1,0.3,1)' }}>
           <Face
             expression={visual.expression}
             energy={energy}
@@ -241,6 +243,7 @@ export function Deskemon() {
 
       {/* ---- Top status ---- */}
       <div
+        className="companion-topbar"
         style={{
           position: 'absolute',
           top: 'max(14px, env(safe-area-inset-top))',
@@ -268,6 +271,7 @@ export function Deskemon() {
       {!['memoryCandidate', 'conflict', 'summaryReady'].includes(state) &&
         !showingTranscript && (
           <div
+            className="companion-state-label"
             style={{
               position: 'absolute',
               left: 0,
@@ -288,6 +292,7 @@ export function Deskemon() {
       {/* ---- Live transcript, restrained and fading ---- */}
       {(state === 'listening' || state === 'thinking') && lines.length > 0 && (
         <div
+          className="companion-transcript"
           style={{
             position: 'absolute',
             left: 0,
@@ -322,6 +327,7 @@ export function Deskemon() {
       {/* ---- Spoken captions ---- */}
       {caption && (
         <div
+          className={`companion-caption${panelOpen ? ' panel-open' : ''}`}
           style={{
             position: 'absolute',
             left: 0,
@@ -397,6 +403,7 @@ export function Deskemon() {
       {/* ---- Success ---- */}
       {state === 'remembering' && saved && (
         <div
+          className="companion-confirmation"
           style={{
             position: 'absolute',
             left: 0,

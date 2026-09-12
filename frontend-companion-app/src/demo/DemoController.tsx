@@ -89,6 +89,7 @@ export function DemoController({
 
   return (
     <div
+      className="demo-controller"
       style={{
         position: 'absolute',
         right: 10,

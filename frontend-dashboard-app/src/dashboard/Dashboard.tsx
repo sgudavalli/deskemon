@@ -13,7 +13,8 @@ import type {
 import './dashboard.css';
 
 const STORAGE_KEY = 'deskemon-control-center-v1';
-const COMPANION_URL = import.meta.env.VITE_COMPANION_URL ?? 'http://localhost:5174';
+const COMPANION_URL = import.meta.env.VITE_COMPANION_URL
+  ?? (import.meta.env.DEV ? 'http://localhost:5176' : 'http://localhost:5173');
 
 const SECTION_COPY: Record<DashboardSection, { title: string; description: string }> = {
   overview: {

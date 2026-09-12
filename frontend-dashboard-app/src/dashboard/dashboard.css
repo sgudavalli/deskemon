@@ -61,7 +61,7 @@ a { color: inherit; text-decoration: none; }
 .header-actions { display: flex; align-items: center; gap: 10px; padding-top: 6px; }
 .saved-state { height: 38px; padding: 0 13px; border: 1px solid var(--line-soft); border-radius: 999px; color: var(--faint); display: inline-flex; align-items: center; gap: 6px; font-size: 11px; font-weight: 650; white-space: nowrap; }
 .saved-state svg { color: var(--teal); }
-.round-link, .icon-action, .close-button { width: 40px; height: 40px; border-radius: 50%; border: 1px solid var(--line); background: var(--surface-2); display: grid; place-items: center; color: var(--soft); transition: 180ms ease; }
+.round-link, .icon-action, .close-button { width: 44px; height: 44px; border-radius: 50%; border: 1px solid var(--line); background: var(--surface-2); display: grid; place-items: center; color: var(--soft); transition: 180ms ease; }
 .round-link:hover, .icon-action:hover, .close-button:hover { color: var(--text); border-color: #414655; transform: translateY(-1px); }
 
 .dashboard-content { width: min(100%, 1320px); margin: 0 auto; animation: dashboard-in 360ms cubic-bezier(.2,.8,.3,1); }
@@ -69,7 +69,7 @@ a { color: inherit; text-decoration: none; }
 .dash-panel { background: linear-gradient(145deg, rgba(255,255,255,.012), transparent 34%), var(--surface); border: 1px solid var(--line-soft); border-radius: var(--radius-lg); padding: 24px; min-width: 0; }
 .dash-panel-head { min-height: 30px; margin-bottom: 20px; display: flex; align-items: center; justify-content: space-between; gap: 18px; }
 .dash-panel h2 { margin: 0; font-size: 17px; font-weight: 650; letter-spacing: -.02em; }
-.text-button { padding: 6px 0; background: transparent; color: var(--teal); display: inline-flex; align-items: center; gap: 4px; font-size: 11px; font-weight: 650; }
+.text-button { min-height: 44px; padding: 6px 0; background: transparent; color: var(--teal); display: inline-flex; align-items: center; gap: 4px; font-size: 11px; font-weight: 650; }
 .panel-meta { color: var(--faint); font-size: 10px; }
 
 .companion-card { grid-column: 1 / -1; min-height: 326px; overflow: hidden; position: relative; border-radius: 30px; border: 1px solid rgba(101,211,202,.15); background: radial-gradient(circle at 78% 50%, rgba(101,211,202,.1), transparent 34%), linear-gradient(118deg, #13171c 0%, #0d1015 60%, #0a0c10 100%); display: grid; grid-template-columns: 1.08fr .92fr; box-shadow: var(--shadow); }
@@ -119,9 +119,9 @@ a { color: inherit; text-decoration: none; }
 
 .section-tools { margin-bottom: 20px; display: flex; align-items: center; justify-content: space-between; gap: 20px; }
 .segmented { padding: 4px; border: 1px solid var(--line-soft); border-radius: 999px; background: var(--surface); display: flex; }
-.segmented button { height: 34px; padding: 0 17px; border-radius: 999px; background: transparent; color: var(--faint); font-size: 11px; font-weight: 650; }
+.segmented button { height: 44px; padding: 0 17px; border-radius: 999px; background: transparent; color: var(--faint); font-size: 11px; font-weight: 650; }
 .segmented button.active { background: var(--surface-3); color: var(--text); }
-.primary-action, .secondary-action, .save-button, .disconnect-button { min-height: 42px; padding: 0 18px; border-radius: 13px; display: inline-flex; align-items: center; justify-content: center; gap: 8px; font-size: 12px; font-weight: 700; transition: 180ms ease; }
+.primary-action, .secondary-action, .save-button, .disconnect-button { min-height: 44px; padding: 0 18px; border-radius: 13px; display: inline-flex; align-items: center; justify-content: center; gap: 8px; font-size: 12px; font-weight: 700; transition: 180ms ease; }
 .primary-action, .save-button { background: var(--teal); color: #09211f; }
 .primary-action:hover, .save-button:hover { background: #7bddD5; transform: translateY(-1px); }
 .primary-action:disabled, .save-button:disabled { opacity: .45; cursor: not-allowed; transform: none; }
@@ -272,12 +272,43 @@ a { color: inherit; text-decoration: none; }
   .activity-panel { grid-column: auto; }
   .routine-grid, .connections-grid { grid-template-columns: 1fr; }
   .section-tools { align-items: stretch; }
-  .segmented { overflow: auto; }
-  .segmented button { padding: 0 12px; }
+  .segmented { overflow-x: auto; scrollbar-width: none; }
+  .segmented::-webkit-scrollbar { display: none; }
+  .segmented button { min-width: max-content; padding: 0 12px; }
   .privacy-grid { grid-template-columns: 1fr; }
   .setting-row { gap: 14px; }
   .trust-grid, .form-grid, .choice-group { grid-template-columns: 1fr; }
   .dashboard-toast { left: 50%; bottom: 88px; width: calc(100% - 32px); justify-content: center; }
+}
+
+@media (max-width: 520px) {
+  .dashboard-main { padding-inline: 12px; }
+  .dashboard-header { align-items: center; gap: 12px; }
+  .dashboard-header h1 { font-size: clamp(26px, 8.4vw, 31px); }
+  .dashboard-header p { font-size: 13px; }
+  .header-actions { padding-top: 0; }
+  .dash-panel { padding: 19px; border-radius: 22px; }
+  .companion-card { min-height: 410px; border-radius: 24px; }
+  .companion-copy { padding: 24px 22px; justify-content: flex-end; }
+  .companion-copy h2 { max-width: 290px; font-size: 28px; }
+  .companion-copy > p { max-width: 310px; font-size: 12px; }
+  .companion-face { right: -22px; top: 10px; width: 62%; height: 39%; }
+  .companion-facts { width: 100%; display: grid; grid-template-columns: repeat(3, minmax(0,1fr)); gap: 10px; }
+  .companion-facts strong { font-size: 18px; }
+  .section-tools { flex-direction: column; }
+  .section-tools .primary-action { width: 100%; }
+  .segmented { width: 100%; }
+  .segmented button { flex: 1 0 auto; }
+  .routine-card-top, .connection-card { padding-inline: 17px; }
+  .routine-body { padding-inline: 17px; }
+  .setting-row { align-items: flex-start; }
+  .select-row { flex-direction: column; }
+  .select-row select { width: 100%; min-height: 44px; }
+  .connections-intro { align-items: flex-start; }
+  .dash-drawer { border-left: 0; }
+  .dash-drawer > header { padding: 20px 18px 16px; }
+  .drawer-content { padding: 20px 18px max(28px, env(safe-area-inset-bottom)); }
+  .connection-actions { align-items: stretch; }
 }
 
 @media (prefers-reduced-motion: reduce) {

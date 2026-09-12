@@ -115,6 +115,7 @@ export function Sheet({
 
   return (
     <div
+      className="companion-sheet"
       role="dialog"
       aria-modal="false"
       style={{
@@ -185,6 +186,7 @@ export function SheetTitle({ children }: { children: ReactNode }) {
 export function Actions({ children }: { children: ReactNode }) {
   return (
     <div
+      className="companion-toast"
       style={{
         display: 'flex',
         gap: space.sm,

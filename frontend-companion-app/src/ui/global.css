@@ -28,11 +28,109 @@ body,
   color: var(--text);
   font-family: var(--f);
   overscroll-behavior: none;
+  min-width: 320px;
+  min-height: 100dvh;
 }
 
 body {
   /* The face must never be scrolled off. */
   overflow: hidden;
+}
+
+.companion-app {
+  min-width: 320px;
+  min-height: 100dvh;
+}
+
+@media (max-width: 680px) and (orientation: portrait) {
+  .companion-face-stage.panel-open {
+    right: 0 !important;
+    bottom: 52% !important;
+  }
+
+  .companion-face-canvas {
+    height: 66% !important;
+  }
+
+  .companion-face-stage.panel-open .companion-face-canvas {
+    height: 62% !important;
+  }
+
+  .companion-sheet {
+    top: auto !important;
+    width: 100% !important;
+    height: 54% !important;
+    padding: 24px max(20px, env(safe-area-inset-right)) max(24px, env(safe-area-inset-bottom)) max(20px, env(safe-area-inset-left)) !important;
+    border-top: 1px solid var(--line) !important;
+    border-left: 0 !important;
+    border-radius: 26px 26px 0 0 !important;
+    animation-name: sheet-in !important;
+    justify-content: flex-start !important;
+  }
+
+  .companion-caption.panel-open {
+    right: 0 !important;
+    bottom: 56% !important;
+  }
+
+  .companion-state-label {
+    bottom: 10% !important;
+  }
+
+  .companion-transcript {
+    bottom: 7% !important;
+  }
+
+  .companion-confirmation {
+    bottom: 10% !important;
+    padding-inline: 20px;
+  }
+
+  .demo-controller {
+    left: 10px !important;
+    right: 10px !important;
+    width: auto;
+    max-width: none !important;
+    max-height: 43dvh;
+    overflow-y: auto;
+  }
+}
+
+@media (max-width: 460px) {
+  .companion-topbar {
+    gap: 6px !important;
+  }
+
+  .companion-topbar > :nth-child(2) {
+    display: none !important;
+  }
+
+  .companion-topbar > span {
+    padding-inline: 10px !important;
+  }
+
+  .companion-sheet button {
+    flex: 1 1 100%;
+  }
+}
+
+@media (max-height: 420px) and (orientation: landscape) {
+  .companion-topbar > span {
+    padding-block: 5px !important;
+  }
+
+  .companion-face-canvas {
+    height: 62% !important;
+  }
+
+  .companion-sheet {
+    padding-top: 18px !important;
+    padding-bottom: 18px !important;
+  }
+
+  .companion-state-label {
+    bottom: 8% !important;
+  }
 }
 
 button {
