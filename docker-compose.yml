@@ -54,5 +54,14 @@ services:
       backend:
         condition: service_healthy
 
+  monitor:
+    # Engineering-only surface for inspecting raw events and generated nudges.
+    build: ./frontend-monitor-app
+    ports:
+      - "5174:80"
+    depends_on:
+      backend:
+        condition: service_healthy
+
 volumes:
   deskemon-pgdata:

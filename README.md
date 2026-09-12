@@ -1,30 +1,30 @@
 # Deskemon
 
-Converges physical-world context (location, motion) with digital-world
-context (browser activity, active app, calendar) to detect wellbeing
-patterns and nudge the user — sedentary time, an experimental
-cognitive-load/stress proxy, and hydration/food/medicine reminders.
+Deskemon is the physical embodiment of a Codex pet: a companion that continues
+beyond the computer, understands what is happening around the desk, and connects
+physical-world context with digital work.
 
-See `DESIGN.md` for the full architecture (components vs. agents, data
-model, build order).
+The phone prototype is the judge-facing product. Its entire display becomes the
+companion's animated face; information appears only when it has something useful
+to say or needs the user's approval.
 
-Currently built: the backend foundation (events/nudges store, ingest API,
-rules engine) — Phase 1 per `DESIGN.md` — plus the first real (non-
-simulated) capture agent: desktop window tracking, with a matching
-notification dispatcher. The simulator still covers phone/browser/calendar
-so the rules engine has continuous data to react to.
+## Repository map
 
-## Stack
+- `app/` — **the primary Deskemon experience and visual source of truth**.
+  React, TypeScript, the animated face, interaction states, privacy controls,
+  ten scenarios, and presenter controls.
+- `backend/` — FastAPI event ingestion, nudge storage, and rules engine.
+- `desktop-agent/` — real macOS foreground-app/window capture.
+- `notifier-agent/` — native macOS notification dispatcher.
+- `simulator/` — simulated phone, browser, and calendar inputs for a reliable demo.
+- `frontend-monitor-app/` — Shiva's engineering dashboard for inspecting raw
+  events and nudges. This is an internal debugging surface, not the product UI.
+- `assets/` — character references and Codex pet motion assets.
+- `docs/` — scenario, interaction, integration, and UI documentation.
 
-Dockerized (`docker compose up -d --build`):
-- `backend/` — FastAPI ingest API + rules engine (Python)
-- `postgres` — events/nudges store, its own container
-- `simulator/` — standalone fake capture-agent service; continuously
-  streams phone/browser/calendar events and triggers the rules engine,
-  simulating agents not yet built (a separate concern from the backend,
-  its own minimal dependencies)
-- `frontend-monitor-app/` — React + Vite monitoring dashboard: live events feed and
-  nudges list, served by nginx, proxying `/api/*` to the backend
+The visual and interaction decisions in `app/`, `CLAUDE.md`, and
+`docs/UI-GUIDE.md` are authoritative for the user-facing experience. Backend and
+agent work connects through adapters without replacing that interface.
 
 Native, host-run (not containerized — need real desktop/GUI access):
 - `desktop-agent/` — real capture agent: polls the frontmost app/window
@@ -76,7 +76,17 @@ This starts four containers:
   appearing within about a minute
 - `frontend-monitor-app` — the monitoring dashboard, exposed on `http://localhost:5173`
 
-Check all four are up:
+- Deskemon companion at `http://localhost:5173`
+- Engineering monitor at `http://localhost:5174`
+- Backend API at `http://localhost:8000`
+- PostgreSQL and the event simulator
+
+The companion remains deliberately demo-safe: its core judge scenario is seeded
+and can run even if a live integration is unavailable. The backend, simulator,
+desktop capture, and notifier can be demonstrated separately as evidence that
+the physical-to-digital pipeline is real.
+
+Check the services and simulator with:
 
 ```bash
 docker compose ps
@@ -132,41 +142,70 @@ curl http://localhost:8000/health
 docker compose logs -f simulator
 ```
 
-You'll see `[phone]`, `[browser]`, and `[calendar]` lines as fake events
-are posted, and `[rules] ran, created_nudges=N` lines every ~20s.
+Stop the stack while retaining database data with `docker compose down`. Add
+`-v` only when you intentionally want to wipe the local database.
 
-**3. Confirm raw events are landing in the store**
+## Run only the companion
 
 ```bash
-curl "http://localhost:8000/events?source=phone" | python3 -m json.tool
-curl "http://localhost:8000/events?source=browser" | python3 -m json.tool
+cd app
+npm install
+npm run dev -- --host
 ```
 
-**4. Confirm nudges are being generated**
+Open it in landscape. Useful routes:
+
+| URL | Purpose |
+|---|---|
+| `/` | Live companion |
+| `/?demo=1` | Presenter controls |
+| `/#scenarios` | All ten animated scenarios |
+| `/#face-lab` | Expression library |
+| `/#style` | UI system |
+
+Presenter keys: `s` runs the hero scenario, `c` jumps to the conflict,
+`a`/`b` demonstrates away and return, `r` resets, and `d` hides the controls.
+
+## Engineering monitor
+
+The monitor at `http://localhost:5174` polls the backend every three seconds. It
+shows raw events and generated nudges. Its **Fake events** toggle separates
+simulator traffic (`payload.synthetic: true`) from real capture-agent traffic.
+
+## Real desktop capture and notifications
+
+With the Docker stack running, use separate terminals:
 
 ```bash
+cd desktop-agent && uv sync && uv run python track.py
+```
+
+```bash
+cd notifier-agent && uv sync && uv run python notify.py
+```
+
+These run natively because containers cannot read the active macOS window or
+send normal Notification Center alerts.
+
+## Verify the data pipeline
+
+```bash
+curl http://localhost:8000/health
+curl "http://localhost:8000/events?source=phone" | python3 -m json.tool
 curl http://localhost:8000/nudges | python3 -m json.tool
 ```
 
-Expected within a minute or two: `hydration`/`food`/`medicine` reminders
-from the first automatic rules-engine pass, then `sedentary` and
-`cognitive_load_experimental` nudges as the simulator's fake sedentary
-stints and tab-switch bursts cross their thresholds. Demo-fast thresholds
-are set via env vars in `docker-compose.yml` (`SEDENTARY_WINDOW_MIN=2`,
-etc.) — see `backend/app/rules_engine.py` for the full list.
-
-**Alternative: one-shot deterministic seed** (instead of the continuous
-simulator) — useful for a fixed, repeatable scenario:
+For a deterministic one-shot seed:
 
 ```bash
 cd backend
 uv sync
 uv run python scripts/seed_demo_events.py http://localhost:8000
 curl -X POST http://localhost:8000/rules/run
-curl http://localhost:8000/nudges | python3 -m json.tool
 ```
 
-**5. Clean up**
+PostgreSQL is available at `localhost:5432`, database and username `deskemon`,
+with the local development password `deskemon`.
 
 ```bash
 docker compose down        # stop containers, keep DB data
@@ -206,8 +245,14 @@ won't spam notifications for nudges that already existed before it ran).
 
 | Endpoint | Description |
 |---|---|
-| `GET /health` | liveness check |
-| `POST /events` | ingest one event: `{source, type, payload, timestamp?}` |
-| `GET /events?since=&source=` | list stored events, optionally filtered |
-| `GET /nudges?since=` | list generated nudges |
-| `POST /rules/run` | run one rules-engine pass on demand |
+| `GET /health` | Backend health |
+| `POST /events` | Ingest an event |
+| `GET /events?since=&source=` | List events |
+| `GET /nudges?since=` | List generated nudges |
+| `POST /rules/run` | Run the rules engine |
+
+## Start here
+
+Read `HANDOFF.md` for the current build state, demo path, architecture, and
+known integration boundaries. `PROJECT_CONTEXT.md` is the product source of
+truth and `DESIGN.md` describes the wider event architecture.

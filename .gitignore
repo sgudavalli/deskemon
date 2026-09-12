@@ -8,3 +8,7 @@ __pycache__/
 
 # Editor / OS
 .DS_Store
+
+# JavaScript build artifacts
+node_modules/
+dist/
