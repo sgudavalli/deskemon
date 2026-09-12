@@ -57,8 +57,7 @@ services:
 
   monitor:
     # Engineering-only surface for inspecting raw events and generated nudges.
-    # Shiva is renaming this directory; update the path when that lands.
-    build: ./frontend
+    build: ./frontend-monitor-app
     ports:
       - "5174:80"
     depends_on:

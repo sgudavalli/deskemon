@@ -20,7 +20,7 @@ def post_event(source: str, type_: str, payload: dict, timestamp: datetime) -> N
         json={
             "source": source,
             "type": type_,
-            "payload": payload,
+            "payload": {**payload, "synthetic": True},
             "timestamp": timestamp.isoformat(),
         },
         timeout=5,

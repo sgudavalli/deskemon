@@ -105,7 +105,7 @@ backend/               FastAPI event store and rules engine
 desktop-agent/         Real macOS foreground-window capture
 notifier-agent/        Native macOS notification dispatch
 simulator/             Seeded phone, browser, and calendar events
-frontend/              Internal raw-event and nudge inspector; rename pending
+frontend-monitor-app/  Internal raw-event and nudge inspector
 ```
 
 The Docker `frontend` service builds `app/`; the engineering monitor is a

@@ -57,7 +57,12 @@ def post_event(source: str, type_: str, payload: dict) -> None:
     try:
         resp = requests.post(
             f"{BASE_URL}/events",
-            json={"source": source, "type": type_, "payload": payload, "timestamp": now_iso()},
+            json={
+                "source": source,
+                "type": type_,
+                "payload": {**payload, "synthetic": True},
+                "timestamp": now_iso(),
+            },
             timeout=5,
         )
         resp.raise_for_status()
