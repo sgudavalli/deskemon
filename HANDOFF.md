@@ -3,7 +3,9 @@
 Everything an agent or developer needs to pick this up cold.
 
 **Status:** the complete mobile UI, interaction flow, animation system, and ten
-simulated scenarios are built and verified in-browser. No integration is live.
+simulated scenarios are built and verified in-browser. Shiva's backend, event
+simulator, desktop capture agent, notifier, and engineering monitor are now in
+the same repository. They are not yet wired into the companion UI.
 
 ---
 
@@ -96,6 +98,20 @@ app/src/
   Deskemon.tsx     The live companion screen
 ```
 
+Repository services outside `app/`:
+
+```text
+backend/               FastAPI event store and rules engine
+desktop-agent/         Real macOS foreground-window capture
+notifier-agent/        Native macOS notification dispatch
+simulator/             Seeded phone, browser, and calendar events
+frontend/              Internal raw-event and nudge inspector; rename pending
+```
+
+The Docker `frontend` service builds `app/`; the engineering monitor is a
+separate service. The companion is the product UI and its visual decisions are
+authoritative.
+
 ### The registry is the important file
 
 `scenarios/registry.ts` defines every scenario as data — beats, timings,
@@ -183,9 +199,12 @@ The rules engine decides *when*; the registry decides *what it looks like*.
 
 Stated plainly so nobody assumes otherwise.
 
-- **No backend.** No server, no database, no API keys anywhere.
-- **No live integrations.** Calendar, Slack, Codex state and transcription are
-  all seeded. Nothing is sent to Slack; no OAuth exists.
+- **The companion is not connected to the backend yet.** The repository now
+  includes a FastAPI event store and rules engine, but `app/` still uses its
+  seeded TypeScript adapters.
+- **No live companion integrations.** Calendar, Slack, Codex state and
+  transcription in the companion are seeded. Nothing is sent to Slack; no
+  OAuth exists.
 - **No speech recognition and no TTS.** `liveVoice.available === false`, so
   captions carry every spoken line. The speech *energy envelope* is synthesised
   so the glow behaves correctly.
@@ -208,12 +227,14 @@ Stated plainly so nobody assumes otherwise.
 
 1. **Open `#scenarios` on a real phone in landscape.** Check safe areas, OLED
    black, and legibility in a bright room.
-2. **Wire `MicEngine` into `Deskemon.tsx`** so the listening arcs respond to real
+2. **Connect backend nudges through an adapter** without changing the visual
+   state machine or scenario choreography.
+3. **Wire `MicEngine` into `Deskemon.tsx`** so the listening arcs respond to real
    speech. Highest credibility-per-hour change available.
-3. **Pick the video cut.** Ten scenarios will not fit in two minutes. Suggested:
+4. **Pick the video cut.** Ten scenarios will not fit in two minutes. Suggested:
    Conflict caught → Water → Codex needs you. Agentic range, tonal range, and the
    "same companion" argument in roughly 40 seconds.
-4. **Then** the Remotion film, if time allows.
+5. **Then** the Remotion film, if time allows.
 
 ---
 

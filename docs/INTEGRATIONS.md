@@ -3,6 +3,11 @@
 The brief requires this to be stated plainly rather than implied. Nothing below
 is dressed up.
 
+The repository also contains a real FastAPI event/nudge backend, a macOS
+foreground-window capture agent, a native notification agent, and a simulator.
+Those services currently operate as a parallel evidence pipeline; the companion
+UI has not yet replaced its seeded adapters with backend-backed adapters.
+
 | Seam | Status | Detail |
 |---|---|---|
 | `voiceActivitySource` | **Real code, not yet wired to the UI** | `src/audio/mic.ts` is a working Web Audio implementation: `getFloatTimeDomainData` → RMS → adaptive noise floor → hysteresis + hang time → damped 0–1 energy. The live screen currently drives the face from the seeded envelope; swapping in `MicEngine` is a one-line change. It is **RMS-grade VAD**, not spectral or model-based. |

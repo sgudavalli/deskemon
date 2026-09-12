@@ -1,103 +1,97 @@
 # Deskemon
 
-Deskemon is the physical embodiment of a Codex pet: the same companion continues beyond the screen, gains awareness of the workspace around it, and connects physical conversations with digital work context.
+Deskemon is the physical embodiment of a Codex pet: a companion that continues
+beyond the computer, understands what is happening around the desk, and connects
+physical-world context with digital work.
 
-## Hackathon premise
+The phone prototype is the judge-facing product. Its entire display becomes the
+companion's animated face; information appears only when it has something useful
+to say or needs the user's approval.
 
-Agents understand what happens inside computers but miss promises, decisions, meetings, and presence around the desk. Deskemon lives in that physical gap. A phone serves as the working prototype; a future dedicated desk device provides the intended form factor.
+## What the combined prototype contains
 
-## Core experience
+- `app/` — **the primary Deskemon experience and visual source of truth**.
+  React, TypeScript, the animated face, interaction states, privacy controls,
+  ten scenarios, and presenter controls.
+- `backend/` — FastAPI event ingestion, nudge storage, and rules engine.
+- `desktop-agent/` — real macOS foreground-app/window capture.
+- `notifier-agent/` — native macOS notification dispatcher.
+- `simulator/` — simulated phone, browser, and calendar inputs for a reliable demo.
+- `frontend/` — Shiva's engineering dashboard for inspecting raw events and
+  nudges. This is an internal debugging surface, not the product UI, and Shiva
+  is renaming it separately.
+- `assets/` — character references and Codex pet motion assets.
+- `docs/` — scenario, interaction, integration, and UI documentation.
 
-Deskemon listens for speech around the desk, turns useful moments into selective memory, checks them against calendar and work context, and asks before taking consequential action. GPT-Live gives the companion a responsive voice.
+The visual and interaction decisions in `app/`, `CLAUDE.md`, and
+`docs/UI-GUIDE.md` are authoritative for the user-facing experience. Backend and
+agent work should connect through adapters without replacing that interface.
 
-The primary demonstration is a spoken commitment that conflicts with the user's calendar or active work. Deskemon notices the conflict, explains it, suggests a realistic alternative, requests confirmation, and saves the approved commitment.
+## Run the full stack
 
-## Supporting capabilities
+From the repository root:
 
-- Action-oriented meeting summaries: decisions, commitments, action items, and follow-ups.
-- Automatic Slack presence based on physical desk presence, calendar context, and active work.
-- Continuity with the Codex pet's identity and task states.
-- Visible listening, thinking, speaking, remembering, waiting, and privacy states.
+```bash
+docker compose up -d --build
+```
 
-## Trust model
+This starts:
 
-Deskemon is ambiently attentive and selectively remembers. Its listening state must be visible. Raw audio should be temporary, irrelevant material should be discarded, and consequential memories or actions should be confirmed by the user.
+- Deskemon companion at `http://localhost:5173`
+- Engineering monitor at `http://localhost:5174`
+- Backend API at `http://localhost:8000`
+- PostgreSQL and the event simulator
 
-## Project state
+The companion remains deliberately demo-safe: its core judge scenario is seeded
+and can run even if a live integration is unavailable. The backend, simulator,
+desktop capture, and notifier can be demonstrated separately as evidence that
+the physical-to-digital pipeline is real.
 
-Created on 2026-09-12 for the Agents Everywhere hackathon build day. See `RESUME_HERE.md` before starting implementation.
-
-## Start here
-
-**Picking this up cold? Read `HANDOFF.md` first.** It covers what exists, what is
-deliberately not done, and the decisions worth not re-litigating.
-
-- `HANDOFF.md` — current state, architecture, invariants, next steps.
-- `PROJECT_CONTEXT.md` contains the complete product, hackathon, technical, trust, and pitch context.
-- `CLAUDE.md` is the implementation brief for the mobile UI, interactions, animation system, and deterministic judge demo.
-- `assets/character/` contains the supplied transparent Baymax PNG and SVG.
-- `assets/pet/` contains the current Codex pet package and motion references.
-
-## Running the prototype
+## Run only the companion
 
 ```bash
 cd app
 npm install
-npm run dev
+npm run dev -- --host
 ```
 
-Open on a phone in **landscape** (the layout is landscape-only). On a laptop,
-size the window wide and short to match.
+Open it in landscape. Useful routes:
 
-### Routes
-
-| URL | What |
+| URL | Purpose |
 |---|---|
-| `/` | The live companion screen |
-| `/?demo=1` | Presenter controls (hidden otherwise) |
-| `/#scenarios` | **All ten scenarios, playable.** The animation reference |
-| `/#face-lab` | All 20 expressions, with a simulated-energy slider |
-| `/#style` | The UI component guide, with measured contrast ratios |
+| `/` | Live companion |
+| `/?demo=1` | Presenter controls |
+| `/#scenarios` | All ten animated scenarios |
+| `/#face-lab` | Expression library |
+| `/#style` | UI system |
 
-### Demo controls (`?demo=1`)
+Presenter keys: `s` runs the hero scenario, `c` jumps to the conflict,
+`a`/`b` demonstrates away and return, `r` resets, and `d` hides the controls.
 
-| Key | Action |
+## Run the real desktop agents
+
+With the Docker stack running, use separate terminals:
+
+```bash
+cd desktop-agent && uv sync && uv run python track.py
+```
+
+```bash
+cd notifier-agent && uv sync && uv run python notify.py
+```
+
+## API
+
+| Endpoint | Description |
 |---|---|
-| `s` | Run the full judge scenario |
-| `c` | Jump to the conflict moment |
-| `r` | Reset |
-| `a` / `b` | Step away / come back (Slack presence) |
-| `←` `→` | Step backward / forward through states |
-| `d` | Hide or show the control panel |
+| `GET /health` | Backend health |
+| `POST /events` | Ingest an event |
+| `GET /events?since=&source=` | List events |
+| `GET /nudges?since=` | List generated nudges |
+| `POST /rules/run` | Run the rules engine |
 
-Press `d` before recording — the panel must not appear in the video.
+## Start here
 
-### Demo script (about 90 seconds)
-
-1. Start in Attentive. The face breathes and blinks. "It is listening, and it
-   shows you that it is."
-2. Press `s`. Speech is detected, the transcript reveals progressively, then it
-   thinks through truthful stages.
-3. The extracted commitment appears — meaning, not a transcript dump.
-4. Press Remember. **The hero moment:** the conflict card. Commitment, the
-   2:00–3:00 clash, the still-running Codex task, and a suggested 4:30.
-5. Deskemon speaks; captions carry the line.
-6. Tap **Move to 4:30 PM**. Success bounce, saved.
-7. The action-oriented summary follows.
-8. Press `a` for the separate presence demonstration.
-
-## Documentation
-
-- `HANDOFF.md` — **start here.** State, architecture, decisions, invariants.
-- `docs/SCENARIOS.md` — all ten scenarios beat by beat (generated from the registry).
-- `docs/UI-GUIDE.md` — the design system, with verified WCAG contrast data.
-- `docs/INTEGRATIONS.md` — exactly what is real and what is simulated.
-- `PROJECT_CONTEXT.md` — product source of truth.
-- `CLAUDE.md` — the implementation brief.
-
-## Note on the character
-
-The Codex pet assets under `assets/` are the *computer* companion — a flat
-Baymax illustration. Deskemon is a different surface: the phone screen **is** the
-face. It is drawn as pure geometry (two eyes, one connecting bar) so it can
-blink, emote, and react to audio — none of which the flat artwork could do.
+Read `HANDOFF.md` for the current build state, demo path, architecture, and
+known integration boundaries. `PROJECT_CONTEXT.md` is the product source of
+truth and `DESIGN.md` describes the wider event architecture.
